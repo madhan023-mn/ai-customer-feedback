@@ -11,6 +11,7 @@ import {
     Layers,
     Sparkles,
     FileText,
+    BarChart3,
     Menu,
     X,
     HelpCircle
@@ -44,6 +45,7 @@ function Navbar() {
         {
             title: "INTELLIGENCE",
             links: [
+                { path: "/analytics", label: "Analytics & Trends", icon: BarChart3 },
                 { path: "/themes", label: "Theme Explorer", icon: Layers },
                 { path: "/insights", label: "AI Insights", icon: Sparkles },
                 { path: "/ask", label: "Ask LOOP", icon: HelpCircle },

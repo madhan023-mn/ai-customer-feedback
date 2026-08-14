@@ -18,6 +18,7 @@ import ThemeDetails from "./pages/ThemeDetails";
 import Insights from "./pages/Insights";
 import AskLoop from "./pages/AskLoop";
 import Reports from "./pages/Reports";
+import Analytics from "./pages/Analytics";
 
 function AppLayout({ children }) {
     return (
@@ -45,6 +46,17 @@ function App() {
                         <ProtectedRoute>
                             <AppLayout>
                                 <Dashboard />
+                            </AppLayout>
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
+                    path="/analytics"
+                    element={
+                        <ProtectedRoute>
+                            <AppLayout>
+                                <Analytics />
                             </AppLayout>
                         </ProtectedRoute>
                     }
