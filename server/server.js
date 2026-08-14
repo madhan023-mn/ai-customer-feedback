@@ -10,13 +10,12 @@ dotenv.config();
 const app = express();
 
 app.use(cors({
-    origin: process.env.CLIENT_URL,
+    origin: process.env.CLIENT_URL || true,
     credentials: true
 }));
 
 app.use(express.json());
 app.use(cookieParser());
-
 
 app.get("/", (req, res) => {
     res.json({
@@ -24,58 +23,29 @@ app.get("/", (req, res) => {
     });
 });
 
-
-app.use(
-    "/api/auth",
-    require("./routes/authRoutes")
-);
-
-app.use(
-    "/api/members",
-    require("./routes/memberRoutes")
-);
-
-
-app.use(
-    "/api/feedback",
-    require("./routes/feedbackRoutes")
-);
-app.use(
-    "/api/dashboard",
-    require("./routes/dashboardRoutes")
-);
-app.use(
-    "/api/ai",
-    require("./routes/aiRoutes")
-);
-app.use(
-    "/api/themes",
-    require("./routes/themeRoutes")
-);
-app.use(
-    "/api/insights",
-    require("./routes/insightRoutes")
-);
-app.use(
-    "/api/reports",
-    require("./routes/reportRoutes")
-);
+app.use("/api/auth", require("./routes/authRoutes"));
+app.use("/api/members", require("./routes/memberRoutes"));
+app.use("/api/feedback", require("./routes/feedbackRoutes"));
+app.use("/api/dashboard", require("./routes/dashboardRoutes"));
+app.use("/api/ai", require("./routes/aiRoutes"));
+app.use("/api/themes", require("./routes/themeRoutes"));
+app.use("/api/insights", require("./routes/insightRoutes"));
+app.use("/api/reports", require("./routes/reportRoutes"));
 
 const PORT = process.env.PORT || 5000;
 
-
-connectDB()
-    .then(() => {
-
-        app.listen(PORT, () => {
-            console.log(
-                `Server running on http://localhost:${PORT}`
-            );
+if (process.env.NODE_ENV !== "production" || !process.env.VERCEL) {
+    connectDB()
+        .then(() => {
+            app.listen(PORT, () => {
+                console.log(`Server running on http://localhost:${PORT}`);
+            });
+        })
+        .catch((error) => {
+            console.error("Database connection error:", error);
         });
+} else {
+    connectDB();
+}
 
-    })
-    .catch((error) => {
-
-        console.error(error);
-
-    });
+module.exports = app;
