@@ -616,6 +616,43 @@ async function simulateChannelIngestion(req, res) {
     }
 }
 
+async function retryAIAnalysis(req, res) {
+    try {
+        const feedback = await Feedback.findOneAndUpdate(
+            {
+                _id: req.params.id,
+                workspace: req.user.workspace,
+                aiStatus: "FAILED"
+            },
+            {
+                $set: {
+                    aiStatus: "PENDING",
+                    aiError: null
+                }
+            },
+            {
+                new: true
+            }
+        );
+
+        if (!feedback) {
+            return res.status(404).json({
+                message: "Failed feedback item not found or not in FAILED state"
+            });
+        }
+
+        res.json({
+            message: "AI analysis queued for retry",
+            feedback
+        });
+    } catch (error) {
+        console.error("Retry AI analysis error:", error);
+        res.status(500).json({
+            message: "Failed to retry AI analysis"
+        });
+    }
+}
+
 module.exports = {
     createFeedback,
     getFeedbacks,
@@ -627,6 +664,7 @@ module.exports = {
     deleteFeedback,
     analyzeFeedback: analyzeSingleFeedback,
     analyzeSingleFeedback,
+    retryAIAnalysis,
     importCSV,
     importFeedbackCsv: importCSV,
     simulateChannelIngestion

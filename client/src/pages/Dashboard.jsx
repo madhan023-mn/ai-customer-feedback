@@ -298,6 +298,83 @@ function Dashboard() {
                     </div>
                 </div>
             )}
+
+            {/* AI Processing Queue & Recent Critical Feedback */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(420px, 1fr))", gap: "20px", marginTop: "20px" }}>
+                {/* AI Processing Status */}
+                <div className="table-card" style={{ padding: "20px" }}>
+                    <h3 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
+                        <Cpu size={18} color="var(--primary)" />
+                        <span>AI Processing Queue Status</span>
+                    </h3>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "12px" }}>
+                        <div style={{ padding: "14px", borderRadius: "10px", background: "#f0fdf4", border: "1px solid #bbf7d0" }}>
+                            <span style={{ fontSize: "0.8rem", color: "#166534", fontWeight: 600 }}>Completed</span>
+                            <strong style={{ fontSize: "1.5rem", display: "block", color: "#15803d", marginTop: "4px" }}>
+                                {data?.aiQueue?.COMPLETED ?? (totalFeedback - pendingAi - failedAi)}
+                            </strong>
+                        </div>
+                        <div style={{ padding: "14px", borderRadius: "10px", background: "#eef2ff", border: "1px solid #c7d2fe" }}>
+                            <span style={{ fontSize: "0.8rem", color: "#3730a3", fontWeight: 600 }}>Pending</span>
+                            <strong style={{ fontSize: "1.5rem", display: "block", color: "#4f46e5", marginTop: "4px" }}>
+                                {data?.aiQueue?.PENDING ?? pendingAi}
+                            </strong>
+                        </div>
+                        <div style={{ padding: "14px", borderRadius: "10px", background: "#f0f9ff", border: "1px solid #bae6fd" }}>
+                            <span style={{ fontSize: "0.8rem", color: "#0369a1", fontWeight: 600 }}>Processing</span>
+                            <strong style={{ fontSize: "1.5rem", display: "block", color: "#0284c7", marginTop: "4px" }}>
+                                {data?.aiQueue?.PROCESSING ?? 0}
+                            </strong>
+                        </div>
+                        <div style={{ padding: "14px", borderRadius: "10px", background: "#fff1f2", border: "1px solid #fecdd3" }}>
+                            <span style={{ fontSize: "0.8rem", color: "#9f1239", fontWeight: 600 }}>Failed</span>
+                            <strong style={{ fontSize: "1.5rem", display: "block", color: "#be123c", marginTop: "4px" }}>
+                                {data?.aiQueue?.FAILED ?? failedAi}
+                            </strong>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Recent Critical Feedback Stream */}
+                <div className="table-card" style={{ padding: "20px" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
+                        <h3 style={{ fontSize: "1.1rem", fontWeight: 700, margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
+                            <Frown size={18} color="#ef4444" />
+                            <span>Recent Critical Feedback</span>
+                        </h3>
+                        <Link to="/feedback?sentiment=NEG" style={{ fontSize: "0.8rem", color: "var(--primary)", textDecoration: "none", fontWeight: 600 }}>
+                            View All →
+                        </Link>
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                        {Array.isArray(data?.recentCritical) && data.recentCritical.length > 0 ? (
+                            data.recentCritical.map(item => (
+                                <Link
+                                    key={item._id}
+                                    to={`/feedback/${item._id}`}
+                                    style={{ padding: "10px 14px", borderRadius: "8px", background: "#fff1f2", border: "1px solid #fecdd3", textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px" }}
+                                >
+                                    <div style={{ minWidth: 0, flex: 1 }}>
+                                        <div style={{ fontSize: "0.875rem", fontWeight: 600, color: "#9f1239", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                            "{item.content}"
+                                        </div>
+                                        <div style={{ fontSize: "0.75rem", color: "#be123c", marginTop: "2px" }}>
+                                            {item.featureArea || "General"} • {item.channel}
+                                        </div>
+                                    </div>
+                                    <span style={{ fontSize: "0.7rem", padding: "2px 8px", borderRadius: "10px", background: "#be123c", color: "white", fontWeight: 700 }}>
+                                        {item.sentiment}
+                                    </span>
+                                </Link>
+                            ))
+                        ) : (
+                            <div style={{ padding: "1.5rem", textAlign: "center", color: "var(--text-muted)", fontSize: "0.9rem" }}>
+                                No recent critical feedback items.
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }

@@ -56,9 +56,20 @@ async function getDashboardStats(req, res) {
                 workspace: workspaceId,
                 createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
             }),
-            Feedback.countDocuments({ workspace: workspaceId, aiStatus: "PENDING" }),
-            Feedback.countDocuments({ workspace: workspaceId, aiStatus: "FAILED" })
+            Feedback.aggregate([
+                { $match: { workspace: workspaceId } },
+                { $group: { _id: "$aiStatus", count: { $sum: 1 } } }
+            ]),
+            Feedback.find({ workspace: workspaceId, sentiment: "NEG" })
+                .sort({ createdAt: -1 })
+                .limit(5)
+                .lean()
         ]);
+
+        const aiQueue = { COMPLETED: 0, PENDING: 0, PROCESSING: 0, FAILED: 0 };
+        (aiStatusAgg || []).forEach(item => {
+            if (item._id) aiQueue[item._id] = item.count;
+        });
 
         const sentimentObj = { POS: 0, NEU: 0, NEG: 0 };
         sentimentAgg.forEach(item => {
@@ -85,8 +96,10 @@ async function getDashboardStats(req, res) {
             total,
             totalFeedback: total,
             recent7Days: recentCount,
-            pendingAi,
-            failedAi,
+            pendingAi: aiQueue.PENDING,
+            failedAi: aiQueue.FAILED,
+            aiQueue,
+            recentCritical,
             sentiment: sentimentObj,
             sentimentStats: sentimentAgg,
             channels: channelsObj,

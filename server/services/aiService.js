@@ -2,6 +2,42 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 const OpenAI = require("openai");
 const { FEATURE_AREAS } = require("../constants/featureAreas");
 
+const ALLOWED_SENTIMENTS = ["POS", "NEU", "NEG"];
+const ALLOWED_FEATURE_AREAS = [
+    "Checkout",
+    "Dashboard",
+    "Mobile",
+    "Search",
+    "Payments",
+    "Authentication",
+    "Support",
+    "Notifications",
+    "Performance",
+    "Other"
+];
+
+function validateAIResult(result) {
+    if (!result) {
+        throw new Error("AI returned no result");
+    }
+    if (!ALLOWED_SENTIMENTS.includes(result.sentiment)) {
+        throw new Error("Invalid AI sentiment");
+    }
+    if (typeof result.sentimentScore !== "number") {
+        throw new Error("Invalid sentiment score");
+    }
+    if (result.sentimentScore < -1 || result.sentimentScore > 1) {
+        throw new Error("Sentiment score must be between -1 and 1");
+    }
+    if (!ALLOWED_FEATURE_AREAS.includes(result.featureArea)) {
+        throw new Error("Invalid feature area");
+    }
+    if (!result.rationale || typeof result.rationale !== "string") {
+        throw new Error("AI rationale is required");
+    }
+    return true;
+}
+
 function getApiKey() {
     return {
         geminiKey: (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.GEMINI_KEY || "").trim(),
@@ -361,7 +397,10 @@ ${formattedContext}`;
 module.exports = {
     analyzeFeedback,
     generateInsight,
-    answerQuestionWithContext
+    answerQuestionWithContext,
+    validateAIResult,
+    ALLOWED_SENTIMENTS,
+    ALLOWED_FEATURE_AREAS
 };
 
 

@@ -14,6 +14,7 @@ const {
     updateFeedbackStatus,
     deleteFeedback,
     analyzeFeedback,
+    retryAIAnalysis,
     importCSV,
     importFeedbackCsv,
     simulateChannelIngestion
@@ -29,8 +30,9 @@ router.post("/", auth, allowRoles("ADMIN", "ANALYST"), createFeedback);
 // Simulate channel integration pull
 router.post("/simulate", auth, allowRoles("ADMIN", "ANALYST"), simulateChannelIngestion);
 
-// AI analysis route
+// AI analysis & retry routes
 router.post("/:id/analyze", auth, allowRoles("ADMIN", "ANALYST"), analyzeFeedback);
+router.post("/:id/retry-ai", auth, allowRoles("ADMIN", "ANALYST"), retryAIAnalysis);
 
 // Bulk CSV import (supports both /upload and /import)
 router.post("/upload", auth, allowRoles("ADMIN", "ANALYST"), upload.single("file"), importCSV);

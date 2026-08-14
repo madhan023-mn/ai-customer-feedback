@@ -92,6 +92,19 @@ function FeedbackDetails() {
         }
     }
 
+    async function retryAI() {
+        if (!canEdit) return;
+        try {
+            setAnalyzing(true);
+            const response = await api.post(`/feedback/${id}/retry-ai`);
+            setFeedback(response.data.feedback || { ...feedback, aiStatus: "PENDING", aiError: null });
+        } catch (err) {
+            alert(err.response?.data?.message || "Failed to queue AI analysis retry");
+        } finally {
+            setAnalyzing(false);
+        }
+    }
+
     if (loading) {
         return (
             <div className="feedback-details-page">
@@ -226,7 +239,18 @@ function FeedbackDetails() {
                             <span>AI Analysis & Rationale</span>
                         </h2>
 
-                        {canEdit && feedback.aiStatus !== "COMPLETED" && (
+                        {canEdit && feedback.aiStatus === "FAILED" && (
+                            <button
+                                className="btn-secondary"
+                                disabled={analyzing}
+                                onClick={retryAI}
+                                style={{ padding: "4px 10px", fontSize: "0.8rem", display: "inline-flex", alignItems: "center", gap: "4px", color: "#be123c", borderColor: "#fca5a5" }}
+                            >
+                                <RotateCcw size={12} />
+                                <span>{analyzing ? "Queuing..." : "Retry AI Analysis"}</span>
+                            </button>
+                        )}
+                        {canEdit && feedback.aiStatus !== "COMPLETED" && feedback.aiStatus !== "FAILED" && (
                             <button
                                 className="btn-secondary"
                                 disabled={analyzing}
@@ -242,6 +266,11 @@ function FeedbackDetails() {
                     <p style={{ fontSize: "0.95rem", lineHeight: 1.6, color: "#334155", margin: 0 }}>
                         {feedback.rationale || "No AI rationale analysis available for this feedback."}
                     </p>
+                    {feedback.aiError && (
+                        <div style={{ marginTop: "10px", fontSize: "0.85rem", color: "#be123c", background: "#ffe4e6", padding: "8px 12px", borderRadius: "6px" }}>
+                            <strong>Error Details:</strong> {feedback.aiError}
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

@@ -59,6 +59,16 @@ const feedbackSchema = new mongoose.Schema(
             trim: true
         },
 
+        aiError: {
+            type: String,
+            default: null
+        },
+
+        analyzedAt: {
+            type: Date,
+            default: null
+        },
+
         status: {
             type: String,
             enum: [
