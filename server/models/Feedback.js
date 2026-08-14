@@ -64,7 +64,9 @@ const feedbackSchema = new mongoose.Schema(
             enum: [
                 "NEW",
                 "REVIEWED",
-                "ACTIONED"
+                "ACTIONED",
+                "RESOLVED",
+                "ARCHIVED"
             ],
             default: "NEW"
         },

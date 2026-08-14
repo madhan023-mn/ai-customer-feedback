@@ -239,7 +239,7 @@ async function getFeedbackStats(req, res) {
             if (item._id) channels[item._id] = item.count;
         });
 
-        const status = { NEW: 0, REVIEWED: 0, ACTIONED: 0 };
+        const status = { NEW: 0, REVIEWED: 0, ACTIONED: 0, RESOLVED: 0, ARCHIVED: 0 };
         statusAgg.forEach(item => {
             if (item._id) status[item._id] = item.count;
         });
