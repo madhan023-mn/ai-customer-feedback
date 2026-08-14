@@ -105,6 +105,11 @@ feedbackSchema.index({
 
 feedbackSchema.index({
     workspace: 1,
+    aiStatus: 1
+});
+
+feedbackSchema.index({
+    workspace: 1,
     channel: 1
 });
 
