@@ -12,8 +12,8 @@ async function getDashboardStats(req, res) {
             featureAgg,
             trendAgg,
             recentCount,
-            pendingAi,
-            failedAi
+            aiStatusAgg,
+            recentCritical
         ] = await Promise.all([
             Feedback.countDocuments({ workspace: workspaceId }),
             Feedback.aggregate([
