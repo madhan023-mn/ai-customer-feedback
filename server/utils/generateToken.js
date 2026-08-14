@@ -1,5 +1,7 @@
 const jwt = require("jsonwebtoken");
 
+const JWT_SECRET = process.env.JWT_SECRET || "loop_secret_jwt_key_default_2026";
+
 function setAuthCookie(res, user) {
     const workspaceId = user.workspace?._id
         ? user.workspace._id.toString()
@@ -13,7 +15,7 @@ function setAuthCookie(res, user) {
             workspace: workspaceId,
             role: user.role
         },
-        process.env.JWT_SECRET,
+        JWT_SECRET,
         {
             expiresIn: "7d"
         }
