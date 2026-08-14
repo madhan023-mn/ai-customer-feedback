@@ -31,11 +31,22 @@ function Analytics() {
     const [data, setData] = useState(null);
     const [trendData, setTrendData] = useState([]);
     const [volumeData, setVolumeData] = useState([]);
+    const [themeTrendData, setThemeTrendData] = useState([]);
+    const [themeNames, setThemeNames] = useState([]);
     const [channelSentimentData, setChannelSentimentData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState("");
     const [range, setRange] = useState("30d");
+
+    const THEME_STROKE_COLORS = [
+        "#6366f1", // Indigo
+        "#ec4899", // Pink
+        "#8b5cf6", // Purple
+        "#06b6d4", // Cyan
+        "#f59e0b", // Amber
+        "#10b981"  // Emerald
+    ];
 
     async function loadAnalyticsData(selectedRange = range, isRefresh = false) {
         try {
@@ -43,17 +54,20 @@ function Analytics() {
             else setLoading(true);
             setError("");
 
-            const [overviewRes, trendRes, volumeRes, channelRes] = await Promise.all([
+            const [overviewRes, trendRes, volumeRes, themeTrendRes, channelRes] = await Promise.all([
                 api.get(`/analytics/overview?range=${selectedRange}`),
                 api.get(`/analytics/trend?range=${selectedRange}`),
                 api.get(`/analytics/volume?range=${selectedRange}`),
+                api.get(`/analytics/theme-trend?range=${selectedRange}`),
                 api.get(`/analytics/channel-sentiment?range=${selectedRange}`)
             ]);
 
             setData(overviewRes.data);
             setTrendData(trendRes.data?.trend || []);
             setVolumeData(volumeRes.data?.volume || []);
-            setChannelSentimentData(channelRes.data?.channels || []);
+            setThemeTrendData(themeTrendRes.data?.trend || []);
+            setThemeNames(themeTrendRes.data?.themes || []);
+            setChannelSentimentData(channelRes.data?.data || channelRes.data?.channels || []);
         } catch (err) {
             console.error("Fetch analytics error:", err);
             setError(err.response?.data?.message || "Failed to load analytics");
@@ -150,6 +164,11 @@ function Analytics() {
         displayDate: formatChartDate(item.date)
     }));
 
+    const formattedThemeTrendData = themeTrendData.map((item) => ({
+        ...item,
+        displayDate: formatChartDate(item.date)
+    }));
+
     const themeSentimentData = buildThemeSentimentData(data?.themeSentiment);
 
     return (
@@ -158,7 +177,7 @@ function Analytics() {
             <div className="page-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
                 <div>
                     <h1 className="page-title">Sentiment & Theme Analytics</h1>
-                    <p className="page-subtitle">Understand customer feedback trends, channel breakdowns, and time-based sentiment metrics</p>
+                    <p className="page-subtitle">Understand customer feedback trends, channel breakdowns, and time-based theme directions</p>
                 </div>
 
                 <div className="analytics-controls" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
@@ -212,19 +231,19 @@ function Analytics() {
 
                 <div className="stat-card" style={{ background: "white", padding: "20px", borderRadius: "12px", border: "1px solid var(--border-light)" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
-                        <span style={{ fontSize: "0.85rem", color: "var(--text-muted)", fontWeight: 600 }}>Trend Data Points</span>
-                        <TrendingUp size={18} color="#22c55e" />
+                        <span style={{ fontSize: "0.85rem", color: "var(--text-muted)", fontWeight: 600 }}>Tracked Top Themes</span>
+                        <Layers size={18} color="#8b5cf6" />
                     </div>
-                    <strong style={{ fontSize: "2rem", color: "#22c55e", fontWeight: 800 }}>
-                        {trendData.length} Days
+                    <strong style={{ fontSize: "2rem", color: "#8b5cf6", fontWeight: 800 }}>
+                        {themeNames.length} Themes
                     </strong>
                     <div style={{ fontSize: "0.78rem", color: "var(--text-subtle)", marginTop: "4px" }}>
-                        Recorded daily entries
+                        Top feature areas monitored
                     </div>
                 </div>
             </div>
 
-            {/* Charts Grid Row 1: Sentiment Trend & Feedback Volume */}
+            {/* Charts Grid Row 1: Sentiment Trend & Theme Trend */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(440px, 1fr))", gap: "20px", marginBottom: "20px" }}>
                 {/* Sentiment Trend Line Chart */}
                 <div className="table-card" style={{ padding: "22px", background: "white", borderRadius: "14px", border: "1px solid var(--border-light)" }}>
@@ -233,7 +252,7 @@ function Analytics() {
                             <TrendingUp size={18} color="var(--primary)" />
                             <span>Sentiment Trend Over Time</span>
                         </h2>
-                        <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Positive / Neutral / Negative breakdown</span>
+                        <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", margin: "4px 0 0 0" }}>Feedback sentiment trajectory</p>
                     </div>
                     <div style={{ width: "100%", height: 320 }}>
                         <ResponsiveContainer>
@@ -251,16 +270,105 @@ function Analytics() {
                     </div>
                 </div>
 
-                {/* Daily Feedback Volume Bar Chart */}
+                {/* Theme Trend Line Chart (Part A & B) */}
+                <div className="table-card" style={{ padding: "22px", background: "white", borderRadius: "14px", border: "1px solid var(--border-light)" }}>
+                    <div className="analytics-card-header" style={{ marginBottom: "16px" }}>
+                        <h2 style={{ fontSize: "1.1rem", fontWeight: 700, margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
+                            <Layers size={18} color="#8b5cf6" />
+                            <span>Theme Trend</span>
+                        </h2>
+                        <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", margin: "4px 0 0 0" }}>Feedback volume by top 5 themes over time</p>
+                    </div>
+                    <div style={{ width: "100%", height: 320 }}>
+                        <ResponsiveContainer>
+                            <LineChart data={formattedThemeTrendData}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                                <XAxis dataKey="displayDate" tick={{ fontSize: 11 }} />
+                                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                                <Tooltip />
+                                <Legend />
+                                {themeNames.map((theme, idx) => (
+                                    <Line
+                                        key={theme}
+                                        type="monotone"
+                                        dataKey={theme}
+                                        name={theme}
+                                        stroke={THEME_STROKE_COLORS[idx % THEME_STROKE_COLORS.length]}
+                                        strokeWidth={2.2}
+                                        dot={{ r: 3 }}
+                                    />
+                                ))}
+                            </LineChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+            </div>
+
+            {/* Charts Grid Row 2: Channel x Sentiment & Theme x Sentiment */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(440px, 1fr))", gap: "20px", marginBottom: "20px" }}>
+                {/* Channel x Sentiment (Part C & D) */}
+                <div className="table-card" style={{ padding: "22px", background: "white", borderRadius: "14px", border: "1px solid var(--border-light)" }}>
+                    <div className="analytics-card-header" style={{ marginBottom: "16px" }}>
+                        <h2 style={{ fontSize: "1.1rem", fontWeight: 700, margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
+                            <Radio size={18} color="var(--primary)" />
+                            <span>Channel × Sentiment</span>
+                        </h2>
+                        <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", margin: "4px 0 0 0" }}>Compare customer sentiment across feedback channels</p>
+                    </div>
+                    <div style={{ width: "100%", height: 320 }}>
+                        <ResponsiveContainer>
+                            <BarChart data={channelSentimentData}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                                <XAxis dataKey="channel" tick={{ fontSize: 10 }} />
+                                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                                <Tooltip />
+                                <Legend />
+                                <Bar dataKey="POS" name="Positive" fill="#22c55e" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="NEU" name="Neutral" fill="#94a3b8" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="NEG" name="Negative" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+
+                {/* Theme x Sentiment Multi-Bar Chart */}
+                <div className="table-card" style={{ padding: "22px", background: "white", borderRadius: "14px", border: "1px solid var(--border-light)" }}>
+                    <div className="analytics-card-header" style={{ marginBottom: "16px" }}>
+                        <h2 style={{ fontSize: "1.1rem", fontWeight: 700, margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
+                            <Layers size={18} color="var(--primary)" />
+                            <span>Theme × Sentiment</span>
+                        </h2>
+                        <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", margin: "4px 0 0 0" }}>Identify feature areas driving negative sentiment</p>
+                    </div>
+                    <div style={{ width: "100%", height: 320 }}>
+                        <ResponsiveContainer>
+                            <BarChart data={themeSentimentData}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                                <XAxis dataKey="theme" tick={{ fontSize: 11 }} />
+                                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                                <Tooltip />
+                                <Legend />
+                                <Bar dataKey="POS" name="Positive" fill="#22c55e" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="NEU" name="Neutral" fill="#94a3b8" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="NEG" name="Negative" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+            </div>
+
+            {/* Charts Grid Row 3: Daily Feedback Volume & Overall Sentiment */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(440px, 1fr))", gap: "20px", marginBottom: "20px" }}>
+                {/* Daily Feedback Volume */}
                 <div className="table-card" style={{ padding: "22px", background: "white", borderRadius: "14px", border: "1px solid var(--border-light)" }}>
                     <div className="analytics-card-header" style={{ marginBottom: "16px" }}>
                         <h2 style={{ fontSize: "1.1rem", fontWeight: 700, margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
                             <BarChart3 size={18} color="var(--primary)" />
-                            <span>Daily Feedback Volume</span>
+                            <span>Feedback Volume</span>
                         </h2>
-                        <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Records received each day</span>
+                        <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", margin: "4px 0 0 0" }}>Number of feedback records received each day</p>
                     </div>
-                    <div style={{ width: "100%", height: 320 }}>
+                    <div style={{ width: "100%", height: 300 }}>
                         <ResponsiveContainer>
                             <BarChart data={formattedVolumeData}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -272,17 +380,17 @@ function Analytics() {
                         </ResponsiveContainer>
                     </div>
                 </div>
-            </div>
 
-            {/* Charts Grid Row 2: Sentiment Distribution & Theme x Sentiment */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(440px, 1fr))", gap: "20px", marginBottom: "20px" }}>
-                {/* Sentiment Pie Chart */}
+                {/* Sentiment Distribution Pie Chart */}
                 <div className="table-card" style={{ padding: "22px", background: "white", borderRadius: "14px", border: "1px solid var(--border-light)" }}>
-                    <h2 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
-                        <PieIcon size={18} color="var(--primary)" />
-                        <span>Overall Sentiment Distribution</span>
-                    </h2>
-                    <div style={{ width: "100%", height: 320 }}>
+                    <div className="analytics-card-header" style={{ marginBottom: "16px" }}>
+                        <h2 style={{ fontSize: "1.1rem", fontWeight: 700, margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
+                            <PieIcon size={18} color="var(--primary)" />
+                            <span>Overall Sentiment Distribution</span>
+                        </h2>
+                        <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", margin: "4px 0 0 0" }}>Positive, neutral, and negative ratio</p>
+                    </div>
+                    <div style={{ width: "100%", height: 300 }}>
                         <ResponsiveContainer>
                             <PieChart>
                                 <Pie
@@ -301,72 +409,6 @@ function Analytics() {
                                 <Tooltip />
                                 <Legend />
                             </PieChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
-
-                {/* Theme x Sentiment Multi-Bar Chart */}
-                <div className="table-card" style={{ padding: "22px", background: "white", borderRadius: "14px", border: "1px solid var(--border-light)" }}>
-                    <h2 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
-                        <Layers size={18} color="var(--primary)" />
-                        <span>Theme × Sentiment Breakdown</span>
-                    </h2>
-                    <div style={{ width: "100%", height: 320 }}>
-                        <ResponsiveContainer>
-                            <BarChart data={themeSentimentData}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                                <XAxis dataKey="theme" tick={{ fontSize: 11 }} />
-                                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                                <Tooltip />
-                                <Legend />
-                                <Bar dataKey="POS" name="Positive" fill="#22c55e" radius={[4, 4, 0, 0]} />
-                                <Bar dataKey="NEU" name="Neutral" fill="#94a3b8" radius={[4, 4, 0, 0]} />
-                                <Bar dataKey="NEG" name="Negative" fill="#ef4444" radius={[4, 4, 0, 0]} />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
-            </div>
-
-            {/* Charts Grid Row 3: Channel x Sentiment & Top Themes Volume */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(440px, 1fr))", gap: "20px", marginBottom: "20px" }}>
-                {/* Channel x Sentiment */}
-                <div className="table-card" style={{ padding: "22px", background: "white", borderRadius: "14px", border: "1px solid var(--border-light)" }}>
-                    <h2 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
-                        <Radio size={18} color="var(--primary)" />
-                        <span>Channel × Sentiment Analysis</span>
-                    </h2>
-                    <div style={{ width: "100%", height: 320 }}>
-                        <ResponsiveContainer>
-                            <BarChart data={channelSentimentData}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                                <XAxis dataKey="channel" tick={{ fontSize: 10 }} />
-                                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                                <Tooltip />
-                                <Legend />
-                                <Bar dataKey="POS" name="Positive" fill="#22c55e" radius={[4, 4, 0, 0]} />
-                                <Bar dataKey="NEU" name="Neutral" fill="#94a3b8" radius={[4, 4, 0, 0]} />
-                                <Bar dataKey="NEG" name="Negative" fill="#ef4444" radius={[4, 4, 0, 0]} />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
-
-                {/* Top Themes Volume */}
-                <div className="table-card" style={{ padding: "22px", background: "white", borderRadius: "14px", border: "1px solid var(--border-light)" }}>
-                    <h2 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
-                        <BarChart3 size={18} color="var(--primary)" />
-                        <span>Top Themes Volume</span>
-                    </h2>
-                    <div style={{ width: "100%", height: 320 }}>
-                        <ResponsiveContainer>
-                            <BarChart data={themeData}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                                <Tooltip />
-                                <Bar dataKey="count" name="Feedback Count" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
-                            </BarChart>
                         </ResponsiveContainer>
                     </div>
                 </div>

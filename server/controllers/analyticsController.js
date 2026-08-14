@@ -293,25 +293,158 @@ async function getFeedbackVolumeTrend(req, res) {
     }
 }
 
-async function getChannelSentiment(req, res) {
+async function getThemeTrend(req, res) {
     try {
         const workspace = req.user.workspace;
+        const allowedRanges = ["7d", "30d", "90d"];
         const range = req.query.range || "30d";
 
-        if (!ALLOWED_RANGES.includes(range)) {
+        if (!allowedRanges.includes(range)) {
             return res.status(400).json({
                 message: "Invalid range. Use 7d, 30d or 90d."
             });
         }
 
-        const { startDate } = calculateStartDate(range);
+        const { startDate, now } = calculateStartDate(range);
 
-        const channelAgg = await Feedback.aggregate([
+        const themeTrend = await Feedback.aggregate([
             {
                 $match: {
                     workspace,
-                    createdAt: { $gte: startDate },
-                    sentiment: { $in: ["POS", "NEU", "NEG"] }
+                    createdAt: {
+                        $gte: startDate,
+                        $lte: now
+                    },
+                    featureArea: {
+                        $nin: [null, ""]
+                    }
+                }
+            },
+            {
+                $group: {
+                    _id: {
+                        date: {
+                            $dateToString: {
+                                format: "%Y-%m-%d",
+                                date: "$createdAt"
+                            }
+                        },
+                        theme: "$featureArea"
+                    },
+                    count: {
+                        $sum: 1
+                    }
+                }
+            },
+            {
+                $sort: {
+                    "_id.date": 1
+                }
+            }
+        ]);
+
+        const formatted = {};
+        themeTrend.forEach(item => {
+            const date = item._id.date;
+            const theme = item._id.theme;
+
+            if (!formatted[date]) {
+                formatted[date] = {
+                    date
+                };
+            }
+
+            formatted[date][theme] = item.count;
+        });
+
+        const result = Object.values(formatted);
+
+        const topThemes = await Feedback.aggregate([
+            {
+                $match: {
+                    workspace,
+                    createdAt: {
+                        $gte: startDate,
+                        $lte: now
+                    },
+                    featureArea: {
+                        $nin: [null, ""]
+                    }
+                }
+            },
+            {
+                $group: {
+                    _id: "$featureArea",
+                    count: {
+                        $sum: 1
+                    }
+                }
+            },
+            {
+                $sort: {
+                    count: -1
+                }
+            },
+            {
+                $limit: 5
+            }
+        ]);
+
+        const themes = topThemes.map(item => item._id);
+
+        const filteredResult = result.map(item => {
+            const row = {
+                date: item.date
+            };
+
+            themes.forEach(theme => {
+                row[theme] = item[theme] || 0;
+            });
+
+            return row;
+        });
+
+        res.json({
+            range,
+            themes,
+            trend: filteredResult
+        });
+    } catch (error) {
+        console.error("Theme trend error:", error);
+        res.status(500).json({
+            message: "Failed to load theme trend"
+        });
+    }
+}
+
+async function getChannelSentiment(req, res) {
+    try {
+        const workspace = req.user.workspace;
+        const allowedRanges = ["7d", "30d", "90d"];
+        const range = req.query.range || "30d";
+
+        if (!allowedRanges.includes(range)) {
+            return res.status(400).json({
+                message: "Invalid range. Use 7d, 30d or 90d."
+            });
+        }
+
+        const { startDate, now } = calculateStartDate(range);
+
+        const result = await Feedback.aggregate([
+            {
+                $match: {
+                    workspace,
+                    createdAt: {
+                        $gte: startDate,
+                        $lte: now
+                    },
+                    channel: {
+                        $nin: [null, ""]
+                    },
+                    sentiment: {
+                        $in: ["POS", "NEU", "NEG"]
+                    }
                 }
             },
             {
@@ -320,31 +453,45 @@ async function getChannelSentiment(req, res) {
                         channel: "$channel",
                         sentiment: "$sentiment"
                     },
-                    count: { $sum: 1 }
+                    count: {
+                        $sum: 1
+                    }
                 }
             },
-            { $sort: { "_id.channel": 1 } }
+            {
+                $sort: {
+                    "_id.channel": 1
+                }
+            }
         ]);
 
         const formatted = {};
-        channelAgg.forEach(item => {
-            const channel = item._id.channel || "UNKNOWN";
+
+        result.forEach(item => {
+            const channel = item._id.channel;
             const sentiment = item._id.sentiment;
 
             if (!formatted[channel]) {
-                formatted[channel] = { channel, POS: 0, NEU: 0, NEG: 0 };
+                formatted[channel] = {
+                    channel,
+                    POS: 0,
+                    NEU: 0,
+                    NEG: 0
+                };
             }
+
             formatted[channel][sentiment] = item.count;
         });
 
         res.json({
             range,
+            data: Object.values(formatted),
             channels: Object.values(formatted)
         });
     } catch (error) {
         console.error("Channel sentiment error:", error);
         res.status(500).json({
-            message: "Failed to load channel sentiment breakdown"
+            message: "Failed to load channel sentiment"
         });
     }
 }
@@ -353,5 +500,6 @@ module.exports = {
     getAnalyticsOverview,
     getSentimentTrend,
     getFeedbackVolumeTrend,
+    getThemeTrend,
     getChannelSentiment
 };
