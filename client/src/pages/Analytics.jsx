@@ -29,19 +29,31 @@ import {
 
 function Analytics() {
     const [data, setData] = useState(null);
+    const [trendData, setTrendData] = useState([]);
+    const [volumeData, setVolumeData] = useState([]);
+    const [channelSentimentData, setChannelSentimentData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState("");
     const [range, setRange] = useState("30d");
 
-    async function loadAnalytics(selectedRange = range, isRefresh = false) {
+    async function loadAnalyticsData(selectedRange = range, isRefresh = false) {
         try {
             if (isRefresh) setRefreshing(true);
             else setLoading(true);
             setError("");
 
-            const response = await api.get(`/analytics/overview?range=${selectedRange}`);
-            setData(response.data);
+            const [overviewRes, trendRes, volumeRes, channelRes] = await Promise.all([
+                api.get(`/analytics/overview?range=${selectedRange}`),
+                api.get(`/analytics/trend?range=${selectedRange}`),
+                api.get(`/analytics/volume?range=${selectedRange}`),
+                api.get(`/analytics/channel-sentiment?range=${selectedRange}`)
+            ]);
+
+            setData(overviewRes.data);
+            setTrendData(trendRes.data?.trend || []);
+            setVolumeData(volumeRes.data?.volume || []);
+            setChannelSentimentData(channelRes.data?.channels || []);
         } catch (err) {
             console.error("Fetch analytics error:", err);
             setError(err.response?.data?.message || "Failed to load analytics");
@@ -52,8 +64,17 @@ function Analytics() {
     }
 
     useEffect(() => {
-        loadAnalytics(range);
+        loadAnalyticsData(range);
     }, [range]);
+
+    function formatChartDate(dateStr) {
+        if (!dateStr) return "";
+        try {
+            return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+        } catch (e) {
+            return dateStr;
+        }
+    }
 
     function buildThemeSentimentData(items) {
         if (!Array.isArray(items)) return [];
@@ -80,32 +101,6 @@ function Analytics() {
         return Object.values(themes);
     }
 
-    function buildTrendData(items) {
-        if (!Array.isArray(items)) return [];
-        const trends = {};
-
-        items.forEach((item) => {
-            const date = item._id?.date;
-            const sentiment = item._id?.sentiment;
-            if (!date) return;
-
-            if (!trends[date]) {
-                trends[date] = {
-                    date,
-                    POS: 0,
-                    NEU: 0,
-                    NEG: 0
-                };
-            }
-
-            if (sentiment && trends[date][sentiment] !== undefined) {
-                trends[date][sentiment] = item.count;
-            }
-        });
-
-        return Object.values(trends);
-    }
-
     if (loading) {
         return (
             <div className="main-content">
@@ -123,7 +118,7 @@ function Analytics() {
                 <div className="alert-error">
                     <AlertCircle size={18} />
                     <span>{error}</span>
-                    <button className="btn-secondary" onClick={() => loadAnalytics(range)} style={{ marginLeft: "12px", padding: "4px 10px", fontSize: "0.8rem" }}>
+                    <button className="btn-secondary" onClick={() => loadAnalyticsData(range)} style={{ marginLeft: "12px", padding: "4px 10px", fontSize: "0.8rem" }}>
                         Retry
                     </button>
                 </div>
@@ -145,13 +140,17 @@ function Analytics() {
         count: item.count
     }));
 
-    const channelData = (data?.channelDistribution || []).map((item) => ({
-        name: item._id || "Unknown",
-        count: item.count
+    const formattedTrendData = trendData.map((item) => ({
+        ...item,
+        displayDate: formatChartDate(item.date)
+    }));
+
+    const formattedVolumeData = volumeData.map((item) => ({
+        ...item,
+        displayDate: formatChartDate(item.date)
     }));
 
     const themeSentimentData = buildThemeSentimentData(data?.themeSentiment);
-    const trendData = buildTrendData(data?.sentimentTrend);
 
     return (
         <div className="main-content">
@@ -159,62 +158,34 @@ function Analytics() {
             <div className="page-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
                 <div>
                     <h1 className="page-title">Sentiment & Theme Analytics</h1>
-                    <p className="page-subtitle">Understand customer feedback trends, channel breakdowns, and theme sentiment correlations</p>
+                    <p className="page-subtitle">Understand customer feedback trends, channel breakdowns, and time-based sentiment metrics</p>
                 </div>
 
-                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                    {/* Time Range Selector */}
-                    <div style={{ display: "flex", background: "#f1f5f9", padding: "4px", borderRadius: "8px", border: "1px solid var(--border-light)" }}>
-                        <button
-                            className={`btn-secondary ${range === "7d" ? "active" : ""}`}
-                            onClick={() => setRange("7d")}
-                            style={{
-                                padding: "6px 12px",
-                                fontSize: "0.8rem",
-                                borderRadius: "6px",
-                                background: range === "7d" ? "white" : "transparent",
-                                boxShadow: range === "7d" ? "var(--shadow-sm)" : "none",
-                                border: "none",
-                                fontWeight: range === "7d" ? 700 : 500
-                            }}
-                        >
-                            7 Days
-                        </button>
-                        <button
-                            className={`btn-secondary ${range === "30d" ? "active" : ""}`}
-                            onClick={() => setRange("30d")}
-                            style={{
-                                padding: "6px 12px",
-                                fontSize: "0.8rem",
-                                borderRadius: "6px",
-                                background: range === "30d" ? "white" : "transparent",
-                                boxShadow: range === "30d" ? "var(--shadow-sm)" : "none",
-                                border: "none",
-                                fontWeight: range === "30d" ? 700 : 500
-                            }}
-                        >
-                            30 Days
-                        </button>
-                        <button
-                            className={`btn-secondary ${range === "90d" ? "active" : ""}`}
-                            onClick={() => setRange("90d")}
-                            style={{
-                                padding: "6px 12px",
-                                fontSize: "0.8rem",
-                                borderRadius: "6px",
-                                background: range === "90d" ? "white" : "transparent",
-                                boxShadow: range === "90d" ? "var(--shadow-sm)" : "none",
-                                border: "none",
-                                fontWeight: range === "90d" ? 700 : 500
-                            }}
-                        >
-                            90 Days
-                        </button>
-                    </div>
+                <div className="analytics-controls" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    <label style={{ fontSize: "0.875rem", color: "var(--text-muted)", fontWeight: 600 }}>
+                        Date Range:
+                    </label>
+                    <select
+                        value={range}
+                        onChange={(e) => setRange(e.target.value)}
+                        style={{
+                            padding: "8px 14px",
+                            borderRadius: "8px",
+                            border: "1px solid var(--border-focus)",
+                            backgroundColor: "white",
+                            fontWeight: 600,
+                            fontSize: "0.875rem",
+                            cursor: "pointer"
+                        }}
+                    >
+                        <option value="7d">Last 7 Days</option>
+                        <option value="30d">Last 30 Days</option>
+                        <option value="90d">Last 90 Days</option>
+                    </select>
 
                     <button
                         className="btn-secondary"
-                        onClick={() => loadAnalytics(range, true)}
+                        onClick={() => loadAnalyticsData(range, true)}
                         disabled={refreshing}
                         style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
                     >
@@ -224,8 +195,8 @@ function Analytics() {
                 </div>
             </div>
 
-            {/* Overview Summary Card */}
-            <div className="stats-grid" style={{ marginBottom: "2rem" }}>
+            {/* Overview Summary Cards */}
+            <div className="stats-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "16px", marginBottom: "2rem" }}>
                 <div className="stat-card" style={{ background: "white", padding: "20px", borderRadius: "12px", border: "1px solid var(--border-light)" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
                         <span style={{ fontSize: "0.85rem", color: "var(--text-muted)", fontWeight: 600 }}>Analyzed Feedback Records</span>
@@ -238,17 +209,80 @@ function Analytics() {
                         Filtered by range: {range.toUpperCase()}
                     </div>
                 </div>
+
+                <div className="stat-card" style={{ background: "white", padding: "20px", borderRadius: "12px", border: "1px solid var(--border-light)" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                        <span style={{ fontSize: "0.85rem", color: "var(--text-muted)", fontWeight: 600 }}>Trend Data Points</span>
+                        <TrendingUp size={18} color="#22c55e" />
+                    </div>
+                    <strong style={{ fontSize: "2rem", color: "#22c55e", fontWeight: 800 }}>
+                        {trendData.length} Days
+                    </strong>
+                    <div style={{ fontSize: "0.78rem", color: "var(--text-subtle)", marginTop: "4px" }}>
+                        Recorded daily entries
+                    </div>
+                </div>
             </div>
 
-            {/* Charts Grid Row 1: Sentiment Distribution & Time Trend */}
+            {/* Charts Grid Row 1: Sentiment Trend & Feedback Volume */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(440px, 1fr))", gap: "20px", marginBottom: "20px" }}>
+                {/* Sentiment Trend Line Chart */}
+                <div className="table-card" style={{ padding: "22px", background: "white", borderRadius: "14px", border: "1px solid var(--border-light)" }}>
+                    <div className="analytics-card-header" style={{ marginBottom: "16px" }}>
+                        <h2 style={{ fontSize: "1.1rem", fontWeight: 700, margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
+                            <TrendingUp size={18} color="var(--primary)" />
+                            <span>Sentiment Trend Over Time</span>
+                        </h2>
+                        <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Positive / Neutral / Negative breakdown</span>
+                    </div>
+                    <div style={{ width: "100%", height: 320 }}>
+                        <ResponsiveContainer>
+                            <LineChart data={formattedTrendData}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                                <XAxis dataKey="displayDate" tick={{ fontSize: 11 }} />
+                                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                                <Tooltip />
+                                <Legend />
+                                <Line type="monotone" dataKey="POS" name="Positive" stroke="#22c55e" strokeWidth={2.5} dot={{ r: 3 }} />
+                                <Line type="monotone" dataKey="NEU" name="Neutral" stroke="#94a3b8" strokeWidth={2} dot={{ r: 3 }} />
+                                <Line type="monotone" dataKey="NEG" name="Negative" stroke="#ef4444" strokeWidth={2.5} dot={{ r: 3 }} />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+
+                {/* Daily Feedback Volume Bar Chart */}
+                <div className="table-card" style={{ padding: "22px", background: "white", borderRadius: "14px", border: "1px solid var(--border-light)" }}>
+                    <div className="analytics-card-header" style={{ marginBottom: "16px" }}>
+                        <h2 style={{ fontSize: "1.1rem", fontWeight: 700, margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
+                            <BarChart3 size={18} color="var(--primary)" />
+                            <span>Daily Feedback Volume</span>
+                        </h2>
+                        <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Records received each day</span>
+                    </div>
+                    <div style={{ width: "100%", height: 320 }}>
+                        <ResponsiveContainer>
+                            <BarChart data={formattedVolumeData}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                                <XAxis dataKey="displayDate" tick={{ fontSize: 11 }} />
+                                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                                <Tooltip />
+                                <Bar dataKey="count" name="Feedback Volume" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+            </div>
+
+            {/* Charts Grid Row 2: Sentiment Distribution & Theme x Sentiment */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(440px, 1fr))", gap: "20px", marginBottom: "20px" }}>
                 {/* Sentiment Pie Chart */}
                 <div className="table-card" style={{ padding: "22px", background: "white", borderRadius: "14px", border: "1px solid var(--border-light)" }}>
                     <h2 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
                         <PieIcon size={18} color="var(--primary)" />
-                        <span>Sentiment Distribution</span>
+                        <span>Overall Sentiment Distribution</span>
                     </h2>
-                    <div style={{ width: "100%", height: 300 }}>
+                    <div style={{ width: "100%", height: 320 }}>
                         <ResponsiveContainer>
                             <PieChart>
                                 <Pie
@@ -267,51 +301,6 @@ function Analytics() {
                                 <Tooltip />
                                 <Legend />
                             </PieChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
-
-                {/* Sentiment Trend Line Chart */}
-                <div className="table-card" style={{ padding: "22px", background: "white", borderRadius: "14px", border: "1px solid var(--border-light)" }}>
-                    <h2 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
-                        <TrendingUp size={18} color="var(--primary)" />
-                        <span>Sentiment Trend Over Time</span>
-                    </h2>
-                    <div style={{ width: "100%", height: 300 }}>
-                        <ResponsiveContainer>
-                            <LineChart data={trendData}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                                <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                                <Tooltip />
-                                <Legend />
-                                <Line type="monotone" dataKey="POS" name="Positive" stroke="#22c55e" strokeWidth={2.5} dot={{ r: 3 }} />
-                                <Line type="monotone" dataKey="NEU" name="Neutral" stroke="#94a3b8" strokeWidth={2} dot={{ r: 3 }} />
-                                <Line type="monotone" dataKey="NEG" name="Negative" stroke="#ef4444" strokeWidth={2.5} dot={{ r: 3 }} />
-                            </LineChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
-            </div>
-
-            {/* Charts Grid Row 2: Top Themes & Theme x Sentiment Stacked Bar */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(440px, 1fr))", gap: "20px", marginBottom: "20px" }}>
-                {/* Top Themes Bar Chart */}
-                <div className="table-card" style={{ padding: "22px", background: "white", borderRadius: "14px", border: "1px solid var(--border-light)" }}>
-                    <h2 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
-                        <BarChart3 size={18} color="var(--primary)" />
-                        <span>Top Themes Volume</span>
-                    </h2>
-                    <div style={{ width: "100%", height: 320 }}>
-                        <ResponsiveContainer>
-                            <BarChart data={themeData}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                                <Tooltip />
-                                <Legend />
-                                <Bar dataKey="count" name="Feedback Count" fill="#6366f1" radius={[4, 4, 0, 0]} />
-                            </BarChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
@@ -339,23 +328,47 @@ function Analytics() {
                 </div>
             </div>
 
-            {/* Channel Analysis Chart */}
-            <div className="table-card" style={{ padding: "22px", background: "white", borderRadius: "14px", border: "1px solid var(--border-light)", marginBottom: "20px" }}>
-                <h2 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
-                    <Radio size={18} color="var(--primary)" />
-                    <span>Feedback Volume by Channel</span>
-                </h2>
-                <div style={{ width: "100%", height: 300 }}>
-                    <ResponsiveContainer>
-                        <BarChart data={channelData} layout="vertical">
-                            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                            <XAxis type="number" allowDecimals={false} />
-                            <YAxis type="category" dataKey="name" width={140} tick={{ fontSize: 11 }} />
-                            <Tooltip />
-                            <Legend />
-                            <Bar dataKey="count" name="Channel Volume" fill="#06b6d4" radius={[0, 4, 4, 0]} />
-                        </BarChart>
-                    </ResponsiveContainer>
+            {/* Charts Grid Row 3: Channel x Sentiment & Top Themes Volume */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(440px, 1fr))", gap: "20px", marginBottom: "20px" }}>
+                {/* Channel x Sentiment */}
+                <div className="table-card" style={{ padding: "22px", background: "white", borderRadius: "14px", border: "1px solid var(--border-light)" }}>
+                    <h2 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
+                        <Radio size={18} color="var(--primary)" />
+                        <span>Channel × Sentiment Analysis</span>
+                    </h2>
+                    <div style={{ width: "100%", height: 320 }}>
+                        <ResponsiveContainer>
+                            <BarChart data={channelSentimentData}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                                <XAxis dataKey="channel" tick={{ fontSize: 10 }} />
+                                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                                <Tooltip />
+                                <Legend />
+                                <Bar dataKey="POS" name="Positive" fill="#22c55e" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="NEU" name="Neutral" fill="#94a3b8" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="NEG" name="Negative" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+
+                {/* Top Themes Volume */}
+                <div className="table-card" style={{ padding: "22px", background: "white", borderRadius: "14px", border: "1px solid var(--border-light)" }}>
+                    <h2 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
+                        <BarChart3 size={18} color="var(--primary)" />
+                        <span>Top Themes Volume</span>
+                    </h2>
+                    <div style={{ width: "100%", height: 320 }}>
+                        <ResponsiveContainer>
+                            <BarChart data={themeData}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                                <Tooltip />
+                                <Bar dataKey="count" name="Feedback Count" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
                 </div>
             </div>
         </div>
