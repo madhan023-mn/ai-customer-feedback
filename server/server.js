@@ -31,6 +31,7 @@ app.use("/api/ai", require("./routes/aiRoutes"));
 app.use("/api/themes", require("./routes/themeRoutes"));
 app.use("/api/insights", require("./routes/insightRoutes"));
 app.use("/api/reports", require("./routes/reportRoutes"));
+app.use("/api/import", require("./routes/importRoutes"));
 
 const PORT = process.env.PORT || 5000;
 
