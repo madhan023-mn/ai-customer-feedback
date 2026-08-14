@@ -193,6 +193,16 @@ function App() {
                         </ProtectedRoute>
                     }
                 />
+                <Route
+                    path="*"
+                    element={
+                        <ProtectedRoute>
+                            <AppLayout>
+                                <Dashboard />
+                            </AppLayout>
+                        </ProtectedRoute>
+                    }
+                />
             </Routes>
         </BrowserRouter>
     );
