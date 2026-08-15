@@ -40,6 +40,7 @@ async function processSingleFeedback(feedbackOrId) {
                 $set: {
                     sentiment: result.sentiment,
                     sentimentScore: result.sentimentScore,
+                    themes: Array.isArray(result.themes) ? result.themes : [result.featureArea],
                     featureArea: result.featureArea,
                     rationale: result.rationale,
                     aiStatus: "COMPLETED",

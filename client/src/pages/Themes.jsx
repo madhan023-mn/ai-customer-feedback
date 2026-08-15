@@ -86,10 +86,10 @@ function Themes() {
                     <AlertTriangle size={22} color="#dc2626" style={{ flexShrink: 0 }} />
                     <div style={{ flex: 1 }}>
                         <strong style={{ color: "#dc2626", fontSize: "0.95rem", display: "block" }}>
-                            Trending Spike Warning ({spikingThemes.length} feature areas spiking)
+                            🔥 Spiking AI Themes Alert ({spikingThemes.length} themes expanding rapidly)
                         </strong>
                         <span style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>
-                            High negative sentiment or volume spikes detected in: {spikingThemes.map(t => t._id).join(", ")}.
+                            High negative sentiment or feedback volume spikes detected in: {spikingThemes.map(t => `${t._id || t.name} (+${t.spikePercentage || 50}%)`).join(", ")}.
                         </span>
                     </div>
                 </div>
@@ -107,67 +107,83 @@ function Themes() {
                 </div>
             ) : (
                 <div className="theme-grid">
-                    {themes.map((theme) => (
-                        <Link
-                            key={theme._id}
-                            to={`/themes/${encodeURIComponent(theme._id)}`}
-                            className="theme-card"
-                            style={{ position: "relative" }}
-                        >
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                                <div>
-                                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                        <h2 style={{ fontSize: "1.25rem", fontWeight: 700, margin: 0 }}>
-                                            {theme._id}
-                                        </h2>
-                                        {theme.isSpiking && (
-                                            <span style={{
-                                                backgroundColor: "rgba(239, 68, 68, 0.12)",
-                                                color: "#dc2626",
-                                                fontSize: "0.75rem",
-                                                fontWeight: 800,
-                                                padding: "2px 8px",
-                                                borderRadius: "12px"
-                                            }}>
-                                                🔥 Spiking
-                                            </span>
-                                        )}
+                    {themes.map((theme) => {
+                        const themeName = theme._id || theme.name || "General";
+                        return (
+                            <Link
+                                key={themeName}
+                                to={`/themes/${encodeURIComponent(themeName)}`}
+                                className="theme-card"
+                                style={{ position: "relative" }}
+                            >
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                                    <div>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                            <h2 style={{ fontSize: "1.25rem", fontWeight: 700, margin: 0 }}>
+                                                {themeName}
+                                            </h2>
+                                            {theme.isSpiking && (
+                                                <span style={{
+                                                    backgroundColor: "rgba(239, 68, 68, 0.12)",
+                                                    color: "#dc2626",
+                                                    fontSize: "0.75rem",
+                                                    fontWeight: 800,
+                                                    padding: "2px 8px",
+                                                    borderRadius: "12px"
+                                                }}>
+                                                    🔥 +{theme.spikePercentage || 50}%
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p style={{ color: "var(--text-muted)", fontSize: "0.875rem", marginTop: "4px" }}>
+                                            {theme.frequency} total feedback items
+                                        </p>
                                     </div>
-                                    <p style={{ color: "var(--text-muted)", fontSize: "0.875rem", marginTop: "4px" }}>
-                                        {theme.frequency} feedback items
-                                    </p>
-                                </div>
-                                <ArrowUpRight size={18} color="var(--text-muted)" />
-                            </div>
-
-                            <div className="theme-stats">
-                                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.85rem", color: "#16a34a" }}>
-                                    <Smile size={14} />
-                                    <span>Positive: <strong>{theme.positive}</strong></span>
+                                    <ArrowUpRight size={18} color="var(--text-muted)" />
                                 </div>
 
-                                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.85rem", color: "#64748b" }}>
-                                    <Meh size={14} />
-                                    <span>Neutral: <strong>{theme.neutral}</strong></span>
-                                </div>
-
-                                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.85rem", color: "#dc2626" }}>
-                                    <Frown size={14} />
-                                    <span>Negative: <strong>{theme.negative}</strong></span>
-                                </div>
-                            </div>
-
-                            <div style={{ paddingTop: "12px", borderTop: "1px solid var(--border-light)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Negative Rate</span>
-                                <strong style={{
-                                    color: Number(theme.negativePercentage) > 50 ? "#dc2626" : Number(theme.negativePercentage) > 25 ? "#d97706" : "#16a34a",
-                                    fontSize: "1rem"
+                                <div style={{
+                                    margin: "12px 0",
+                                    padding: "8px 12px",
+                                    backgroundColor: "var(--bg-subtle, rgba(255,255,255,0.04))",
+                                    borderRadius: "8px",
+                                    display: "flex",
+                                    justify: "space-between",
+                                    fontSize: "0.8rem"
                                 }}>
-                                    {Number(theme.negativePercentage).toFixed(1)}% negative
-                                </strong>
-                            </div>
-                        </Link>
-                    ))}
+                                    <span>This Month: <strong>{theme.thisMonth || theme.frequency}</strong></span>
+                                    <span style={{ color: "var(--text-muted)" }}>Prev Month: <strong>{theme.previousMonth || 0}</strong></span>
+                                </div>
+
+                                <div className="theme-stats">
+                                    <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.85rem", color: "#16a34a" }}>
+                                        <Smile size={14} />
+                                        <span>Positive: <strong>{theme.positive}</strong></span>
+                                    </div>
+
+                                    <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.85rem", color: "#64748b" }}>
+                                        <Meh size={14} />
+                                        <span>Neutral: <strong>{theme.neutral}</strong></span>
+                                    </div>
+
+                                    <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.85rem", color: "#dc2626" }}>
+                                        <Frown size={14} />
+                                        <span>Negative: <strong>{theme.negative}</strong></span>
+                                    </div>
+                                </div>
+
+                                <div style={{ paddingTop: "12px", borderTop: "1px solid var(--border-light)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                    <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Negative Risk</span>
+                                    <strong style={{
+                                        color: Number(theme.negativePercentage) > 50 ? "#dc2626" : Number(theme.negativePercentage) > 25 ? "#d97706" : "#16a34a",
+                                        fontSize: "0.95rem"
+                                    }}>
+                                        {Number(theme.negativePercentage || 0).toFixed(1)}% negative
+                                    </strong>
+                                </div>
+                            </Link>
+                        );
+                    })}
                 </div>
             )}
         </div>

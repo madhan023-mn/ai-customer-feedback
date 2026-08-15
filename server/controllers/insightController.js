@@ -1,8 +1,62 @@
 const Feedback = require("../models/Feedback");
 const Insight = require("../models/Insight");
 const { generateInsight } = require("../services/aiService");
-const insightSchema = require("../validators/insightValidator");
 const calculateTrend = require("../utils/calculateTrend");
+const { generateInsights } = require("../services/insightProcessor");
+
+async function getInsights(req, res) {
+    try {
+        const workspace = req.user.workspace;
+
+        try {
+            await generateInsights(workspace);
+        } catch (procErr) {
+            console.warn("Background insight generation warning:", procErr.message);
+        }
+
+        const insights = await Insight.find({
+            workspace,
+            status: "ACTIVE"
+        })
+        .sort({ generatedAt: -1, createdAt: -1 })
+        .limit(20)
+        .lean();
+
+        res.json({
+            insights
+        });
+    } catch (error) {
+        console.error("Get insights error:", error);
+        res.status(500).json({
+            message: "Failed to load insights"
+        });
+    }
+}
+
+async function triggerInsightGeneration(req, res) {
+    try {
+        const workspace = req.user.workspace;
+        await generateInsights(workspace);
+
+        const insights = await Insight.find({
+            workspace,
+            status: "ACTIVE"
+        })
+        .sort({ generatedAt: -1, createdAt: -1 })
+        .limit(20)
+        .lean();
+
+        res.json({
+            message: "Insights generated successfully",
+            insights
+        });
+    } catch (error) {
+        console.error("Trigger insight generation error:", error);
+        res.status(500).json({
+            message: "Failed to generate insights"
+        });
+    }
+}
 
 async function generateThemeInsight(req, res) {
     try {
@@ -53,30 +107,31 @@ async function generateThemeInsight(req, res) {
         const examples = allFeedback.slice(0, 5).map(item => item.content);
 
         const statistics = {
-            frequency,
+            theme,
+            totalFeedback: frequency,
             positive,
             neutral,
             negative,
-            negativePercentage,
-            trendDirection
+            negativePercentage: Number(negativePercentage).toFixed(1),
+            trendDirection,
+            examples
         };
 
-        const aiResult = await generateInsight(theme, statistics, examples);
-        const validation = insightSchema.safeParse(aiResult);
-
-        if (!validation.success) {
-            return res.status(502).json({
-                message: "AI returned invalid insight data"
-            });
-        }
+        const aiResult = await generateInsight(statistics);
+        const severity = aiResult.severity || aiResult.priority || "MEDIUM";
 
         const insight = await Insight.create({
             workspace,
             theme,
-            title: validation.data.title,
-            summary: validation.data.summary,
-            recommendation: validation.data.recommendation,
-            priority: validation.data.priority
+            type: "THEME_RISK",
+            title: aiResult.title,
+            summary: aiResult.summary,
+            recommendation: aiResult.recommendation,
+            severity,
+            priority: severity,
+            evidence: statistics,
+            status: "ACTIVE",
+            generatedAt: new Date()
         });
 
         res.status(201).json({
@@ -91,24 +146,8 @@ async function generateThemeInsight(req, res) {
     }
 }
 
-async function getInsights(req, res) {
-    try {
-        const insights = await Insight.find({
-            workspace: req.user.workspace
-        }).sort({ createdAt: -1 });
-
-        res.json({
-            insights
-        });
-    } catch (error) {
-        console.error("Get insights error:", error);
-        res.status(500).json({
-            message: "Failed to load insights"
-        });
-    }
-}
-
 module.exports = {
-    generateThemeInsight,
-    getInsights
+    getInsights,
+    triggerInsightGeneration,
+    generateThemeInsight
 };

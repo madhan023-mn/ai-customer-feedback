@@ -1,6 +1,6 @@
 const Feedback = require("../models/Feedback");
 const { processFeedback } = require("../services/feedbackAiProcessor");
-const { answerQuestionWithContext } = require("../services/aiService");
+const { answerQuestionWithContext, performVectorSearch } = require("../services/aiService");
 
 const MAX_BATCH_SIZE = 10;
 
@@ -121,42 +121,21 @@ async function askLoop(req, res) {
 
         const workspace = req.user.workspace;
 
-        // Tokenize question to extract keywords
-        const stopWords = new Set(["what", "are", "users", "saying", "about", "the", "is", "a", "an", "and", "or", "in", "on", "for", "to", "of", "with", "how", "do", "does", "why"]);
-        const keywords = question
-            .toLowerCase()
-            .replace(/[^\w\s]/g, "")
-            .split(/\s+/)
-            .filter(word => word.length > 2 && !stopWords.has(word));
+        // Perform semantic vector retrieval (Top-K = 7)
+        const vectorMatches = await performVectorSearch(workspace, question.trim(), 7);
 
-        let contextItems = [];
+        let contextItems = vectorMatches || [];
 
-        if (keywords.length > 0) {
-            // Regex query across content and featureArea
-            const regexQuery = keywords.map(kw => new RegExp(kw, "i"));
-            contextItems = await Feedback.find({
-                workspace,
-                $or: [
-                    { content: { $in: regexQuery } },
-                    { featureArea: { $in: regexQuery } },
-                    { rationale: { $in: regexQuery } }
-                ]
-            })
-            .sort({ createdAt: -1 })
-            .limit(10)
-            .lean();
-        }
-
-        // Fallback to top recent feedback if keyword match returns less than 3
+        // Fallback to top recent feedback if vector match is empty
         if (contextItems.length < 3) {
             const fallbackItems = await Feedback.find({ workspace })
                 .sort({ createdAt: -1 })
-                .limit(10)
+                .limit(7)
                 .lean();
 
-            const existingIds = new Set(contextItems.map(i => i._id.toString()));
+            const existingIds = new Set(contextItems.map(i => String(i._id)));
             for (const item of fallbackItems) {
-                if (!existingIds.has(item._id.toString()) && contextItems.length < 10) {
+                if (!existingIds.has(String(item._id))) {
                     contextItems.push(item);
                 }
             }

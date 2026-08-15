@@ -54,6 +54,18 @@ const feedbackSchema = new mongoose.Schema(
             trim: true
         },
 
+        themes: [
+            {
+                type: String,
+                trim: true
+            }
+        ],
+
+        embedding: {
+            type: [Number],
+            default: []
+        },
+
         rationale: {
             type: String,
             trim: true

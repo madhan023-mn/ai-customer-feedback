@@ -1529,3 +1529,78 @@ textarea {
         grid-template-columns: 1fr;
     }
 }
+
+/* AI Insights Dashboard Styling */
+.dashboard-card-header {
+    margin-bottom: 20px;
+}
+
+.dashboard-card-header p {
+    color: #667085;
+    margin-top: 5px;
+}
+
+.insight-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.insight-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    padding: 16px;
+    border: 1px solid #eaecf0;
+    border-radius: 10px;
+    background: #fafafa;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.insight-item:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+.insight-item strong {
+    display: block;
+    margin-bottom: 6px;
+    color: var(--text-main);
+}
+
+.insight-item p {
+    color: #667085;
+    margin-bottom: 6px;
+    line-height: 1.5;
+}
+
+.insight-item small {
+    color: #667085;
+}
+
+.insight-item > span {
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.insight-low {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+}
+
+.insight-medium {
+    background: #fef3c7;
+    border-color: #fde68a;
+}
+
+.insight-high {
+    background: #fff1f2;
+    border-color: #fecdd3;
+}
+
+.insight-critical {
+    background: #ffe4e6;
+    border-color: #fca5a5;
+}

@@ -60,11 +60,15 @@ function AskLoop() {
                 <div>
                     <h1 className="page-title" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                         <Sparkles size={28} color="var(--primary)" />
-                        <span>Ask LOOP — Grounded Q&A</span>
+                        <span>Ask LOOP — Grounded Q&A (Vector RAG Engine)</span>
                     </h1>
                     <p className="page-subtitle">
-                        Ask plain-English questions and get answers grounded strictly in customer feedback data.
+                        Ask plain-English questions. Semantic vector search retrieves top-K feedback before generating grounded answers.
                     </p>
+                </div>
+                <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", backgroundColor: "rgba(109, 93, 252, 0.12)", color: "#6d5dfc", padding: "8px 14px", borderRadius: "20px", fontSize: "0.85rem", fontWeight: 700, border: "1px solid rgba(109, 93, 252, 0.25)" }}>
+                    <ShieldCheck size={16} />
+                    <span>Vector Semantic Retrieval Engine Active</span>
                 </div>
             </div>
 

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import api from "../services/api";
 import {
     FileText,
@@ -12,17 +12,38 @@ import {
     Frown,
     Layers,
     Sparkles,
-    CheckCircle2
+    CheckCircle2,
+    Quote,
+    FolderArchive,
+    Eye
 } from "lucide-react";
 
 function Reports() {
     const [from, setFrom] = useState("");
     const [to, setTo] = useState("");
     const [report, setReport] = useState(null);
+    const [savedReports, setSavedReports] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [savedLoading, setSavedLoading] = useState(false);
     const [error, setError] = useState("");
 
-    async function generateReport() {
+    async function loadSavedReports() {
+        try {
+            setSavedLoading(true);
+            const res = await api.get("/reports/saved");
+            setSavedReports(res.data.reports || []);
+        } catch (err) {
+            console.error("Load saved reports error:", err);
+        } finally {
+            setSavedLoading(false);
+        }
+    }
+
+    useEffect(() => {
+        loadSavedReports();
+    }, []);
+
+    async function generateVoCReport() {
         try {
             setLoading(true);
             setError("");
@@ -33,14 +54,17 @@ function Reports() {
                 return;
             }
 
-            const response = await api.get("/reports", {
-                params: { from, to }
+            const response = await api.post("/reports/voc", {
+                from,
+                to,
+                title: `Weekly Voice-of-Customer Report (${from} to ${to})`
             });
 
-            setReport(response.data);
+            setReport(response.data.report?.contentJson || response.data.report);
+            loadSavedReports();
         } catch (err) {
-            console.error("Generate report error:", err);
-            setError(err.response?.data?.message || "Failed to generate report");
+            console.error("Generate VoC report error:", err);
+            setError(err.response?.data?.message || "Failed to generate VoC report");
         } finally {
             setLoading(false);
         }
@@ -84,15 +108,15 @@ function Reports() {
                 <div>
                     <h1 className="page-title" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                         <FileText size={26} color="var(--primary)" />
-                        <span>Executive Reports & Intelligence</span>
+                        <span>Executive Voice-of-Customer (VoC) Reports</span>
                     </h1>
                     <p className="page-subtitle">
-                        Analyze customer sentiment, top feature themes, and AI recommendations over a custom date range.
+                        Generate period-based AI executive summaries, top customer themes, sentiment shifts, and saved PDF reports.
                     </p>
                 </div>
             </div>
 
-            {/* Date Filters Card */}
+            {/* Date Filters & VoC Generator Card */}
             <div className="report-filters">
                 <div>
                     <label style={{ display: "flex", alignItems: "center", gap: "6px" }}>
@@ -120,17 +144,20 @@ function Reports() {
 
                 <button
                     className="btn-primary"
-                    onClick={generateReport}
+                    onClick={generateVoCReport}
                     disabled={loading}
-                    style={{ height: "42px", padding: "0 24px" }}
+                    style={{ height: "42px", padding: "0 24px", display: "inline-flex", alignItems: "center", gap: "8px" }}
                 >
                     {loading ? (
-                        <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+                        <>
                             <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} />
-                            <span>Generating...</span>
-                        </span>
+                            <span>Generating VoC Report...</span>
+                        </>
                     ) : (
-                        "Generate Report"
+                        <>
+                            <Sparkles size={16} />
+                            <span>Generate AI VoC Report</span>
+                        </>
                     )}
                 </button>
             </div>
@@ -142,13 +169,13 @@ function Reports() {
                 </div>
             )}
 
-            {/* Report Content */}
+            {/* Active Generated Report Display */}
             {report && (
-                <div className="report-content">
-                    {/* Header Action Bar */}
+                <div className="report-content" style={{ marginTop: "24px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-                        <h2 style={{ fontSize: "1.2rem", fontWeight: 700, margin: 0 }}>
-                            Report Summary ({new Date(report.dateRange.from).toLocaleDateString()} – {new Date(report.dateRange.to).toLocaleDateString()})
+                        <h2 style={{ fontSize: "1.3rem", fontWeight: 700, margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
+                            <Sparkles color="var(--primary)" size={22} />
+                            <span>Executive VoC Narrative Report ({from} – {to})</span>
                         </h2>
 
                         <div className="report-actions" style={{ marginBottom: 0 }}>
@@ -172,85 +199,83 @@ function Reports() {
                         </div>
                     </div>
 
+                    {/* Executive Summary Card */}
+                    {report.narrative && (
+                        <div style={{
+                            background: "linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(168, 85, 247, 0.08) 100%)",
+                            border: "1px solid rgba(99, 102, 241, 0.25)",
+                            borderRadius: "16px",
+                            padding: "24px",
+                            marginBottom: "24px"
+                        }}>
+                            <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--primary)", marginBottom: "10px" }}>
+                                📝 Executive Summary
+                            </h3>
+                            <p style={{ fontSize: "1rem", lineHeight: 1.7, color: "var(--text-main)", marginBottom: "16px" }}>
+                                {report.narrative.executiveSummary}
+                            </p>
+
+                            {report.narrative.keyFindings && (
+                                <div style={{ marginBottom: "16px" }}>
+                                    <strong style={{ fontSize: "0.95rem", display: "block", marginBottom: "6px" }}>Key Findings:</strong>
+                                    <ul style={{ paddingLeft: "20px", color: "var(--text-muted)", fontSize: "0.9rem" }}>
+                                        {report.narrative.keyFindings.map((f, i) => (
+                                            <li key={i} style={{ marginBottom: "4px" }}>{f}</li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+
+                            {report.narrative.recommendations && (
+                                <div>
+                                    <strong style={{ fontSize: "0.95rem", color: "#16a34a", display: "block", marginBottom: "6px" }}>Recommended Action Items:</strong>
+                                    <ul style={{ paddingLeft: "20px", color: "var(--text-main)", fontSize: "0.9rem" }}>
+                                        {report.narrative.recommendations.map((r, i) => (
+                                            <li key={i} style={{ marginBottom: "4px", fontWeight: 600 }}>{r}</li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     {/* Summary KPI Grid */}
-                    <div className="report-kpi-grid">
-                        <div className="report-kpi">
-                            <span>Total Feedback</span>
-                            <strong>{report.summary.totalFeedback}</strong>
-                        </div>
-
-                        <div className="report-kpi" style={{ borderLeft: "4px solid #22c55e" }}>
-                            <span>Positive</span>
-                            <strong style={{ color: "#16a34a" }}>{report.summary.positive}</strong>
-                        </div>
-
-                        <div className="report-kpi" style={{ borderLeft: "4px solid #94a3b8" }}>
-                            <span>Neutral</span>
-                            <strong style={{ color: "#64748b" }}>{report.summary.neutral}</strong>
-                        </div>
-
-                        <div className="report-kpi" style={{ borderLeft: "4px solid #ef4444" }}>
-                            <span>Negative</span>
-                            <strong style={{ color: "#dc2626" }}>{report.summary.negative}</strong>
-                        </div>
-                    </div>
-
-                    {/* Sentiment Section */}
-                    <div className="report-section">
-                        <h2 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "16px" }}>
-                            Sentiment Breakdown Ratio
-                        </h2>
-
-                        <div className="sentiment-report">
-                            <div style={{ borderLeft: "4px solid #22c55e" }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#16a34a", fontSize: "0.85rem", fontWeight: 600 }}>
-                                    <Smile size={16} />
-                                    <span>Positive Ratio</span>
-                                </div>
-                                <strong style={{ color: "#16a34a" }}>
-                                    {report.sentimentPercentage.positive.toFixed(1)}%
-                                </strong>
+                    {report.summary && (
+                        <div className="report-kpi-grid">
+                            <div className="report-kpi">
+                                <span>Total Feedback</span>
+                                <strong>{report.summary.totalFeedback}</strong>
                             </div>
 
-                            <div style={{ borderLeft: "4px solid #94a3b8" }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#64748b", fontSize: "0.85rem", fontWeight: 600 }}>
-                                    <Meh size={16} />
-                                    <span>Neutral Ratio</span>
-                                </div>
-                                <strong style={{ color: "#64748b" }}>
-                                    {report.sentimentPercentage.neutral.toFixed(1)}%
-                                </strong>
+                            <div className="report-kpi" style={{ borderLeft: "4px solid #22c55e" }}>
+                                <span>Positive</span>
+                                <strong style={{ color: "#16a34a" }}>{report.summary.positive}</strong>
                             </div>
 
-                            <div style={{ borderLeft: "4px solid #ef4444" }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#dc2626", fontSize: "0.85rem", fontWeight: 600 }}>
-                                    <Frown size={16} />
-                                    <span>Negative Ratio</span>
-                                </div>
-                                <strong style={{ color: "#dc2626" }}>
-                                    {report.sentimentPercentage.negative.toFixed(1)}%
-                                </strong>
+                            <div className="report-kpi" style={{ borderLeft: "4px solid #94a3b8" }}>
+                                <span>Neutral</span>
+                                <strong style={{ color: "#64748b" }}>{report.summary.neutral}</strong>
+                            </div>
+
+                            <div className="report-kpi" style={{ borderLeft: "4px solid #ef4444" }}>
+                                <span>Negative</span>
+                                <strong style={{ color: "#dc2626" }}>{report.summary.negative}</strong>
                             </div>
                         </div>
-                    </div>
+                    )}
 
                     {/* Top Themes */}
-                    <div className="report-section">
-                        <h2 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
-                            <Layers size={18} color="var(--primary)" />
-                            <span>Top Feature Themes</span>
-                        </h2>
-
-                        {report.themes.length === 0 ? (
-                            <p style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>
-                                No classified feature themes recorded in this period.
-                            </p>
-                        ) : (
+                    {report.topThemes && report.topThemes.length > 0 && (
+                        <div className="report-section">
+                            <h2 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
+                                <Layers size={18} color="var(--primary)" />
+                                <span>Top Feature Themes</span>
+                            </h2>
                             <div className="report-theme-list">
-                                {report.themes.map((theme) => (
-                                    <div key={theme._id} className="report-theme">
+                                {report.topThemes.map((theme, idx) => (
+                                    <div key={idx} className="report-theme">
                                         <div>
-                                            <strong style={{ fontSize: "1rem" }}>{theme._id}</strong>
+                                            <strong style={{ fontSize: "1rem" }}>{theme.name}</strong>
                                             <span>{theme.count} feedback items</span>
                                         </div>
 
@@ -267,51 +292,68 @@ function Reports() {
                                     </div>
                                 ))}
                             </div>
-                        )}
-                    </div>
-
-                    {/* AI Insights Section */}
-                    <div className="report-section">
-                        <h2 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
-                            <Sparkles size={18} color="var(--primary)" />
-                            <span>AI Insights & Recommendations</span>
-                        </h2>
-
-                        {report.insights.length === 0 ? (
-                            <p style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>
-                                No AI insights generated for this date range.
-                            </p>
-                        ) : (
-                            report.insights.map((insight) => (
-                                <div key={insight._id} className="report-insight">
-                                    <div>
-                                        <span className="badge badge-channel">{insight.theme}</span>
-                                        <strong className={`badge ${
-                                            insight.priority === "HIGH" ? "badge-neg" :
-                                            insight.priority === "MEDIUM" ? "badge-neu" : "badge-pos"
-                                        }`}>
-                                            {insight.priority} PRIORITY
-                                        </strong>
-                                    </div>
-
-                                    <h3 style={{ fontSize: "1.05rem", fontWeight: 700, margin: "8px 0" }}>
-                                        {insight.title}
-                                    </h3>
-
-                                    <p style={{ color: "var(--text-muted)", fontSize: "0.9rem", lineHeight: 1.5, margin: "0 0 10px 0" }}>
-                                        {insight.summary}
-                                    </p>
-
-                                    <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "var(--primary)", fontSize: "0.85rem", fontWeight: 700 }}>
-                                        <CheckCircle2 size={15} />
-                                        <span>Action: {insight.recommendation}</span>
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                    </div>
+                        </div>
+                    )}
                 </div>
             )}
+
+            {/* Saved Reports Browser */}
+            <div className="table-card" style={{ marginTop: "32px", padding: "24px" }}>
+                <h3 style={{ fontSize: "1.2rem", fontWeight: 700, marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
+                    <FolderArchive size={20} color="var(--primary)" />
+                    <span>Saved Historical VoC Reports ({savedReports.length})</span>
+                </h3>
+
+                {savedLoading ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--text-muted)" }}>
+                        <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} />
+                        <span>Loading saved reports...</span>
+                    </div>
+                ) : savedReports.length === 0 ? (
+                    <p style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>
+                        No saved VoC reports found. Select a date range above and click "Generate AI VoC Report".
+                    </p>
+                ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                        {savedReports.map((saved) => (
+                            <div
+                                key={saved._id}
+                                style={{
+                                    padding: "16px 20px",
+                                    border: "1px solid var(--border-light)",
+                                    borderRadius: "12px",
+                                    display: "flex",
+                                    justify: "space-between",
+                                    alignItems: "center",
+                                    backgroundColor: "var(--bg-subtle, rgba(255,255,255,0.02))"
+                                }}
+                            >
+                                <div>
+                                    <strong style={{ fontSize: "1rem", display: "block" }}>{saved.title}</strong>
+                                    <span style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>
+                                        Generated by {saved.generatedBy?.name || "Admin"} on {new Date(saved.createdAt).toLocaleDateString()}
+                                    </span>
+                                </div>
+
+                                <button
+                                    className="btn-secondary"
+                                    onClick={() => {
+                                        setReport(saved.contentJson);
+                                        if (saved.periodStart && saved.periodEnd) {
+                                            setFrom(new Date(saved.periodStart).toISOString().split("T")[0]);
+                                            setTo(new Date(saved.periodEnd).toISOString().split("T")[0]);
+                                        }
+                                    }}
+                                    style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+                                >
+                                    <Eye size={15} />
+                                    <span>View Report</span>
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
         </div>
     );
 }

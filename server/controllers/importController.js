@@ -2,6 +2,7 @@ const fs = require("fs");
 const Feedback = require("../models/Feedback");
 const { parseCSVFile } = require("../utils/csvImport");
 const { validateHeaders, validateRow } = require("../validators/csvValidator");
+const { queueFeedbackAnalysisBulk } = require("../queues/feedbackJobProducer");
 
 async function importFeedbackCSV(req, res) {
     let uploadedFile = null;
@@ -66,6 +67,13 @@ async function importFeedbackCSV(req, res) {
         if (feedbackDocuments.length > 0) {
             const inserted = await Feedback.insertMany(feedbackDocuments);
             insertedCount = inserted.length;
+
+            try {
+                const insertedIds = inserted.map((doc) => doc._id);
+                await queueFeedbackAnalysisBulk(insertedIds);
+            } catch (qErr) {
+                console.warn("Failed to queue bulk AI jobs for CSV import:", qErr.message);
+            }
         }
 
         res.status(201).json({

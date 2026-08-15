@@ -135,12 +135,28 @@ async function seedDatabase() {
                 "Beta Tester"
             ];
 
+            const themeMap = {
+                "Checkout": ["Checkout Problem", "Checkout Payment Failure"],
+                "Onboarding": ["Onboarding Latency", "Team Invitation Flow"],
+                "Dashboard": ["Dashboard UI", "Realtime Metrics"],
+                "Payments": ["Payment Gateway Timeout", "Billing Invoice"],
+                "Mobile": ["Mobile Crash", "Push Notifications"],
+                "Search": ["Search Filter Speed", "Result Highlighting"],
+                "Support": ["Support Ticket SLA", "Agent Responsiveness"],
+                "Notifications": ["Notification Latency", "Email Verification"],
+                "Performance": ["Performance Bottleneck", "System Latency"],
+                "Authentication": ["Login Issues", "Auth 2FA SMS"]
+            };
+
+            const extractedThemes = themeMap[template.featureArea] || [template.featureArea];
+
             feedbackDocs.push({
                 content: `${template.content} (Ref #${1000 + i})`,
                 channel,
                 customerLabel: customerLabels[i % customerLabels.length],
                 sentiment: template.sentiment,
                 sentimentScore: template.score,
+                themes: extractedThemes,
                 featureArea: template.featureArea,
                 rationale: template.rationale,
                 status,

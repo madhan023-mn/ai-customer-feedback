@@ -3,6 +3,10 @@ const Feedback = require("../models/Feedback");
 const {
     analyzeFeedback
 } = require("../services/aiService");
+const {
+    queueFeedbackAnalysis,
+    queueFeedbackAnalysisBulk
+} = require("../queues/feedbackJobProducer");
 
 const aiResultSchema =
     require("../validators/aiValidator");
@@ -31,59 +35,16 @@ async function createFeedback(req, res) {
                     req.user.workspace
             });
 
+        // Queue AI analysis job
+        await queueFeedbackAnalysis(feedback._id);
+
         // Send response immediately
         res.status(201).json({
+            message: "Feedback created and queued for AI analysis",
             feedback
         });
-
-        // Analyze after saving
-        try {
-            const aiResult =
-                await analyzeFeedback(
-                    feedback.content
-                );
-
-            const validation =
-                aiResultSchema.safeParse(
-                    aiResult
-                );
-
-            if (
-                validation.success
-            ) {
-                feedback.sentiment =
-                    validation.data
-                        .sentiment;
-
-                feedback.sentimentScore =
-                    validation.data
-                        .sentimentScore;
-
-                feedback.featureArea =
-                    validation.data
-                        .featureArea;
-
-                feedback.rationale =
-                    validation.data
-                        .rationale;
-
-                feedback.aiStatus = "COMPLETED";
-
-                await feedback.save();
-            } else {
-                feedback.aiStatus = "FAILED";
-                await feedback.save();
-            }
-        } catch (aiError) {
-            feedback.aiStatus = "FAILED";
-            await feedback.save();
-            console.error(
-                "AI analysis failed:",
-                aiError
-            );
-        }
     } catch (error) {
-        console.error(error);
+        console.error("Create feedback error:", error);
         res.status(500).json({
             message:
                 "Failed to create feedback"
@@ -101,6 +62,8 @@ async function getFeedbacks(req, res) {
             status,
             featureArea,
             aiStatus,
+            fromDate,
+            toDate,
             page = 1,
             limit = 20,
             sortBy = "createdAt",
@@ -129,6 +92,18 @@ async function getFeedbacks(req, res) {
 
         if (aiStatus && aiStatus !== "ALL") {
             query.aiStatus = aiStatus;
+        }
+
+        if (fromDate || toDate) {
+            query.createdAt = {};
+            if (fromDate) {
+                query.createdAt.$gte = new Date(fromDate);
+            }
+            if (toDate) {
+                const endDate = new Date(toDate);
+                endDate.setHours(23, 59, 59, 999);
+                query.createdAt.$lte = endDate;
+            }
         }
 
         if (search && search.trim()) {
@@ -483,9 +458,13 @@ async function importCSV(req, res) {
         }
 
         const created = await Feedback.insertMany(docsToInsert);
+        const createdIds = created.map(doc => doc._id);
+
+        // Queue bulk jobs for AI processing in BullMQ
+        await queueFeedbackAnalysisBulk(createdIds);
 
         res.status(201).json({
-            message: `Successfully imported ${created.length} feedback items`,
+            message: `Successfully imported ${created.length} feedback items and queued for AI analysis`,
             imported: created.length,
             count: created.length,
             rejected: errors.length,
@@ -586,24 +565,12 @@ async function simulateChannelIngestion(req, res) {
                 workspace: req.user.workspace
             });
 
-            try {
-                const aiResult = await analyzeFeedback(item.content);
-                feedback.sentiment = aiResult.sentiment || "NEU";
-                feedback.sentimentScore = aiResult.sentimentScore || 0;
-                feedback.featureArea = aiResult.featureArea || "Other";
-                feedback.rationale = aiResult.rationale || "Auto-classified by simulated channel ingestion.";
-                feedback.aiStatus = "COMPLETED";
-                await feedback.save();
-            } catch (err) {
-                feedback.aiStatus = "FAILED";
-                await feedback.save();
-            }
-
+            await queueFeedbackAnalysis(feedback._id);
             createdItems.push(feedback);
         }
 
         res.status(201).json({
-            message: `Successfully simulated ${targetChannel} sync! Ingested ${createdItems.length} records.`,
+            message: `Successfully simulated ${targetChannel} sync! Queued ${createdItems.length} records for AI analysis.`,
             count: createdItems.length,
             channel: targetChannel,
             feedback: createdItems
@@ -640,6 +607,9 @@ async function retryAIAnalysis(req, res) {
                 message: "Failed feedback item not found or not in FAILED state"
             });
         }
+
+        // Queue BullMQ job for retry
+        await queueFeedbackAnalysis(feedback._id);
 
         res.json({
             message: "AI analysis queued for retry",

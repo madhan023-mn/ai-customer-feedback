@@ -8,16 +8,33 @@ async function getThemes(req, res) {
         const themes = await Feedback.aggregate([
             {
                 $match: {
-                    workspace,
-                    featureArea: {
-                        $exists: true,
-                        $nin: ["", null]
+                    workspace
+                }
+            },
+            {
+                $project: {
+                    sentiment: 1,
+                    createdAt: 1,
+                    themeList: {
+                        $cond: {
+                            if: { $and: [{ $isArray: "$themes" }, { $gt: [{ $size: "$themes" }, 0] }] },
+                            then: "$themes",
+                            else: ["$featureArea"]
+                        }
                     }
                 }
             },
             {
+                $unwind: "$themeList"
+            },
+            {
+                $match: {
+                    themeList: { $nin: ["", null, "Other", "General Feedback"] }
+                }
+            },
+            {
                 $group: {
-                    _id: "$featureArea",
+                    _id: "$themeList",
                     frequency: { $sum: 1 },
                     positive: {
                         $sum: {
@@ -67,12 +84,21 @@ async function getThemes(req, res) {
                 }
             },
             {
-                $group: {
-                    _id: "$featureArea",
-                    recentCount: { $sum: 1 },
-                    recentNegative: {
-                        $sum: { $cond: [{ $eq: ["$sentiment", "NEG"] }, 1, 0] }
+                $project: {
+                    themeList: {
+                        $cond: {
+                            if: { $and: [{ $isArray: "$themes" }, { $gt: [{ $size: "$themes" }, 0] }] },
+                            then: "$themes",
+                            else: ["$featureArea"]
+                        }
                     }
+                }
+            },
+            { $unwind: "$themeList" },
+            {
+                $group: {
+                    _id: "$themeList",
+                    recentCount: { $sum: 1 }
                 }
             }
         ]);
@@ -85,19 +111,30 @@ async function getThemes(req, res) {
                 }
             },
             {
+                $project: {
+                    themeList: {
+                        $cond: {
+                            if: { $and: [{ $isArray: "$themes" }, { $gt: [{ $size: "$themes" }, 0] }] },
+                            then: "$themes",
+                            else: ["$featureArea"]
+                        }
+                    }
+                }
+            },
+            { $unwind: "$themeList" },
+            {
                 $group: {
-                    _id: "$featureArea",
+                    _id: "$themeList",
                     priorCount: { $sum: 1 }
                 }
             }
         ]);
 
-        const recentMap = new Map(recentCounts.map(r => [r._id, r]));
+        const recentMap = new Map(recentCounts.map(r => [r._id, r.recentCount]));
         const priorMap = new Map(priorCounts.map(p => [p._id, p.priorCount]));
 
         const enrichedThemes = themes.map(t => {
-            const recent = recentMap.get(t._id);
-            const rCount = recent?.recentCount || 0;
+            const rCount = recentMap.get(t._id) || 0;
             const pCount = priorMap.get(t._id) || 0;
             const negPct = t.negativePercentage || 0;
 
@@ -116,6 +153,9 @@ async function getThemes(req, res) {
 
             return {
                 ...t,
+                name: t._id,
+                thisMonth: rCount,
+                previousMonth: pCount,
                 isSpiking,
                 spikePercentage
             };
@@ -135,6 +175,69 @@ async function getThemes(req, res) {
     }
 }
 
+async function getThemeTrends(req, res) {
+    try {
+        const workspace = req.user.workspace;
+        const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+        const twentyEightDaysAgo = new Date(Date.now() - 28 * 24 * 60 * 60 * 1000);
+
+        const currentPeriod = await Feedback.aggregate([
+            { $match: { workspace, createdAt: { $gte: fourteenDaysAgo } } },
+            {
+                $project: {
+                    themeList: {
+                        $cond: {
+                            if: { $and: [{ $isArray: "$themes" }, { $gt: [{ $size: "$themes" }, 0] }] },
+                            then: "$themes",
+                            else: ["$featureArea"]
+                        }
+                    }
+                }
+            },
+            { $unwind: "$themeList" },
+            { $group: { _id: "$themeList", currentCount: { $sum: 1 } } }
+        ]);
+
+        const previousPeriod = await Feedback.aggregate([
+            { $match: { workspace, createdAt: { $gte: twentyEightDaysAgo, $lt: fourteenDaysAgo } } },
+            {
+                $project: {
+                    themeList: {
+                        $cond: {
+                            if: { $and: [{ $isArray: "$themes" }, { $gt: [{ $size: "$themes" }, 0] }] },
+                            then: "$themes",
+                            else: ["$featureArea"]
+                        }
+                    }
+                }
+            },
+            { $unwind: "$themeList" },
+            { $group: { _id: "$themeList", previousCount: { $sum: 1 } } }
+        ]);
+
+        const prevMap = new Map(previousPeriod.map(p => [p._id, p.previousCount]));
+
+        const trends = currentPeriod.map(c => {
+            const thisMonth = c.currentCount;
+            const previousMonth = prevMap.get(c._id) || 0;
+            const diff = thisMonth - previousMonth;
+            const percentChange = previousMonth > 0 ? Math.round((diff / previousMonth) * 100) : 100;
+
+            return {
+                theme: c._id,
+                thisMonth,
+                previousMonth,
+                percentChange,
+                isSpike: percentChange >= 25
+            };
+        }).sort((a, b) => b.thisMonth - a.thisMonth);
+
+        res.json({ trends });
+    } catch (error) {
+        console.error("Get theme trends error:", error);
+        res.status(500).json({ message: "Failed to fetch theme trends" });
+    }
+}
 
 async function getThemeTrend(req, res) {
     try {
@@ -145,7 +248,10 @@ async function getThemeTrend(req, res) {
             {
                 $match: {
                     workspace,
-                    featureArea: theme
+                    $or: [
+                        { themes: theme },
+                        { featureArea: theme }
+                    ]
                 }
             },
             {
@@ -190,10 +296,13 @@ async function getThemeDetails(req, res) {
 
         const allFeedback = await Feedback.find({
             workspace,
-            featureArea: theme
+            $or: [
+                { themes: theme },
+                { featureArea: theme }
+            ]
         })
         .sort({ createdAt: -1 })
-        .select("content sentiment sentimentScore channel status createdAt featureArea aiStatus rationale");
+        .select("content sentiment sentimentScore channel status createdAt featureArea themes aiStatus rationale");
 
         if (!allFeedback.length) {
             return res.status(404).json({
@@ -205,7 +314,10 @@ async function getThemeDetails(req, res) {
             {
                 $match: {
                     workspace,
-                    featureArea: theme
+                    $or: [
+                        { themes: theme },
+                        { featureArea: theme }
+                    ]
                 }
             },
             {
@@ -264,6 +376,7 @@ async function getThemeDetails(req, res) {
 
 module.exports = {
     getThemes,
+    getThemeTrends,
     getThemeTrend,
     getThemeDetails
 };

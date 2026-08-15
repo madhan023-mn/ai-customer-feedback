@@ -32,6 +32,8 @@ function Feedback() {
     const [status, setStatus] = useState("ALL");
     const [featureArea, setFeatureArea] = useState("ALL");
     const [aiStatusFilter, setAiStatusFilter] = useState("ALL");
+    const [fromDate, setFromDate] = useState("");
+    const [toDate, setToDate] = useState("");
 
     // Pagination states
     const [page, setPage] = useState(1);
@@ -115,6 +117,9 @@ function Feedback() {
                 aiStatus: aiStatusFilter
             });
 
+            if (fromDate) queryParams.append("fromDate", fromDate);
+            if (toDate) queryParams.append("toDate", toDate);
+
             const res = await api.get(`/feedback?${queryParams.toString()}`);
             setFeedbacks(res.data.feedbacks || res.data.feedback || []);
             setTotalPages(res.data.pages || res.data.pagination?.totalPages || 1);
@@ -129,7 +134,7 @@ function Feedback() {
 
     useEffect(() => {
         fetchFeedbacks();
-    }, [page, channel, sentiment, status, featureArea, aiStatusFilter]);
+    }, [page, channel, sentiment, status, featureArea, aiStatusFilter, fromDate, toDate]);
 
     function handleSearchSubmit(e) {
         e.preventDefault();
@@ -282,6 +287,38 @@ function Feedback() {
                         <option value="COMPLETED">Completed</option>
                         <option value="FAILED">Failed</option>
                     </select>
+
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <span style={{ fontSize: "0.8rem", color: "var(--text-muted)", fontWeight: 600 }}>From:</span>
+                        <input
+                            type="date"
+                            className="filter-select"
+                            style={{ padding: "6px 10px", fontSize: "0.8rem" }}
+                            value={fromDate}
+                            onChange={(e) => { setFromDate(e.target.value); setPage(1); }}
+                        />
+                    </div>
+
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <span style={{ fontSize: "0.8rem", color: "var(--text-muted)", fontWeight: 600 }}>To:</span>
+                        <input
+                            type="date"
+                            className="filter-select"
+                            style={{ padding: "6px 10px", fontSize: "0.8rem" }}
+                            value={toDate}
+                            onChange={(e) => { setToDate(e.target.value); setPage(1); }}
+                        />
+                    </div>
+
+                    {(fromDate || toDate) && (
+                        <button
+                            className="btn-secondary"
+                            style={{ padding: "6px 10px", fontSize: "0.8rem" }}
+                            onClick={() => { setFromDate(""); setToDate(""); setPage(1); }}
+                        >
+                            Reset Dates
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -320,7 +357,17 @@ function Feedback() {
                                     <tr key={item._id}>
                                         <td>
                                             <div className="feedback-content-text">{item.content}</div>
-                                            <div style={{ marginTop: "8px", fontSize: "0.85rem", display: "flex", flexDirection: "column", gap: "2px" }}>
+                                            <div style={{ marginTop: "8px", fontSize: "0.85rem", display: "flex", flexDirection: "column", gap: "4px" }}>
+                                                {Array.isArray(item.themes) && item.themes.length > 0 && (
+                                                    <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "2px" }}>
+                                                        {item.themes.map((t, idx) => (
+                                                            <span key={idx} className="badge" style={{ backgroundColor: "rgba(109, 93, 252, 0.12)", color: "#6d5dfc", border: "1px solid rgba(109, 93, 252, 0.2)", fontSize: "0.75rem" }}>
+                                                                🏷️ {t}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                )}
+
                                                 <p>
                                                     <strong>AI Status:</strong>{" "}
                                                     <span className={`badge ${

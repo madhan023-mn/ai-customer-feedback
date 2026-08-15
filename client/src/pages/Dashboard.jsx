@@ -33,9 +33,19 @@ import {
 function Dashboard() {
     const { user } = useAuth();
     const [data, setData] = useState(null);
+    const [insights, setInsights] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState("");
+
+    async function loadInsights() {
+        try {
+            const response = await api.get("/insights");
+            setInsights(response.data.insights || []);
+        } catch (err) {
+            console.error("Failed to load insights:", err);
+        }
+    }
 
     async function loadDashboard(isRefresh = false) {
         try {
@@ -62,6 +72,7 @@ function Dashboard() {
 
     useEffect(() => {
         loadDashboard();
+        loadInsights();
     }, []);
 
     if (loading) {
@@ -144,7 +155,7 @@ function Dashboard() {
                 <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
                     <button
                         className="btn-secondary"
-                        onClick={() => loadDashboard(true)}
+                        onClick={() => { loadDashboard(true); loadInsights(); }}
                         disabled={refreshing}
                         style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
                     >
@@ -209,6 +220,86 @@ function Dashboard() {
                     <div style={{ fontSize: "1.85rem", fontWeight: 800, color: "#be123c" }}>{negPct}%</div>
                     <div style={{ fontSize: "0.78rem", color: "var(--text-subtle)", marginTop: "4px" }}>{negCount} entries</div>
                 </div>
+            </div>
+
+            {/* AI Insights Card */}
+            <div className="dashboard-card table-card" style={{ padding: "20px", background: "white", borderRadius: "12px", border: "1px solid var(--border-light)", marginBottom: "20px" }}>
+                <div className="dashboard-card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                    <div>
+                        <h2 style={{ fontSize: "1.1rem", fontWeight: 700, margin: 0, display: "flex", alignItems: "center", gap: "8px", color: "var(--text-main)" }}>
+                            <Sparkles size={18} color="var(--primary)" />
+                            <span>AI Insights</span>
+                        </h2>
+                        <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", marginTop: "4px", margin: 0 }}>
+                            Important patterns detected from customer feedback.
+                        </p>
+                    </div>
+                    <Link to="/insights" style={{ fontSize: "0.8rem", color: "var(--primary)", textDecoration: "none", fontWeight: 600 }}>
+                        View All →
+                    </Link>
+                </div>
+
+                {insights.length === 0 ? (
+                    <p style={{ color: "var(--text-muted)", fontSize: "0.9rem", margin: 0 }}>
+                        No active insights found.
+                    </p>
+                ) : (
+                    <div className="insight-list" style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                        {insights.map(insight => {
+                            const sev = (insight.severity || insight.priority || "MEDIUM").toUpperCase();
+                            const sevColor = sev === "CRITICAL" || sev === "HIGH" ? "#be123c" : sev === "MEDIUM" ? "#b45309" : "#15803d";
+                            const sevBg = sev === "CRITICAL" || sev === "HIGH" ? "#fff1f2" : sev === "MEDIUM" ? "#fef3c7" : "#f0fdf4";
+                            const sevBorder = sev === "CRITICAL" || sev === "HIGH" ? "#fecdd3" : sev === "MEDIUM" ? "#fde68a" : "#bbf7d0";
+
+                            return (
+                                <div
+                                    key={insight._id}
+                                    className={`insight-item insight-${sev.toLowerCase()}`}
+                                    style={{
+                                        display: "flex",
+                                        justify: "space-between",
+                                        alignItems: "flex-start",
+                                        gap: "20px",
+                                        padding: "16px",
+                                        border: `1px solid ${sevBorder}`,
+                                        borderRadius: "10px",
+                                        background: sevBg
+                                    }}
+                                >
+                                    <div style={{ flex: 1 }}>
+                                        <strong style={{ display: "block", marginBottom: "6px", fontSize: "0.95rem", color: "var(--text-main)" }}>
+                                            {insight.title}
+                                        </strong>
+                                        <p style={{ color: "var(--text-muted)", marginBottom: "6px", lineHeight: 1.5, fontSize: "0.875rem" }}>
+                                            {insight.summary}
+                                        </p>
+                                        {insight.recommendation && (
+                                            <p style={{ color: "var(--text-main)", fontWeight: 600, fontSize: "0.825rem", margin: "4px 0" }}>
+                                                Recommendation: {insight.recommendation}
+                                            </p>
+                                        )}
+                                        <small style={{ color: "var(--text-subtle)", fontSize: "0.78rem" }}>
+                                            Theme: {insight.theme || "General"}
+                                        </small>
+                                    </div>
+
+                                    <span style={{
+                                        fontSize: "0.75rem",
+                                        fontWeight: 700,
+                                        whiteSpace: "nowrap",
+                                        color: sevColor,
+                                        padding: "4px 10px",
+                                        borderRadius: "12px",
+                                        background: "white",
+                                        border: `1px solid ${sevBorder}`
+                                    }}>
+                                        {sev}
+                                    </span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
             </div>
 
             {/* Visual Charts & Stats Section */}

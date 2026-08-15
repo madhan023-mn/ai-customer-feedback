@@ -19,6 +19,8 @@ import Insights from "./pages/Insights";
 import AskLoop from "./pages/AskLoop";
 import Reports from "./pages/Reports";
 import Analytics from "./pages/Analytics";
+import NotFound from "./pages/NotFound";
+import Forbidden from "./pages/Forbidden";
 
 function AppLayout({ children }) {
     return (
@@ -193,12 +195,24 @@ function App() {
                         </ProtectedRoute>
                     }
                 />
+
+                <Route
+                    path="/403"
+                    element={
+                        <ProtectedRoute>
+                            <AppLayout>
+                                <Forbidden />
+                            </AppLayout>
+                        </ProtectedRoute>
+                    }
+                />
+
                 <Route
                     path="*"
                     element={
                         <ProtectedRoute>
                             <AppLayout>
-                                <Dashboard />
+                                <NotFound />
                             </AppLayout>
                         </ProtectedRoute>
                     }
