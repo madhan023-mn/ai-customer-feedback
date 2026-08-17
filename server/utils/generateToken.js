@@ -2,14 +2,14 @@ const jwt = require("jsonwebtoken");
 
 const JWT_SECRET = process.env.JWT_SECRET || "loop_secret_jwt_key_default_2026";
 
-function setAuthCookie(res, user) {
+function generateToken(user) {
     const workspaceId = user.workspace?._id
         ? user.workspace._id.toString()
         : user.workspace
         ? user.workspace.toString()
         : "";
 
-    const token = jwt.sign(
+    return jwt.sign(
         {
             id: user._id.toString(),
             workspace: workspaceId,
@@ -20,15 +20,22 @@ function setAuthCookie(res, user) {
             expiresIn: "7d"
         }
     );
+}
+
+function setAuthCookie(res, user) {
+    const token = generateToken(user);
 
     res.cookie("token", token, {
         httpOnly: true,
-        sameSite: "lax",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
         secure: process.env.NODE_ENV === "production",
         maxAge: 7 * 24 * 60 * 60 * 1000
     });
+
+    return token;
 }
 
 module.exports = {
+    generateToken,
     setAuthCookie
 };

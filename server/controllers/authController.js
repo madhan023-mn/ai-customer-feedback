@@ -9,7 +9,7 @@ async function register(req, res) {
 
         if (!name || !email || !password || !workspaceName) {
             return res.status(400).json({
-                message: "All fields are required"
+                message: "All fields (Name, Email, Password, Workspace Name) are required."
             });
         }
 
@@ -39,9 +39,10 @@ async function register(req, res) {
             workspace: workspace._id
         });
 
-        setAuthCookie(res, user);
+        const token = setAuthCookie(res, user);
 
         res.status(201).json({
+            token,
             user: {
                 id: user._id,
                 name: user.name,
@@ -64,7 +65,7 @@ async function login(req, res) {
 
         if (!email || !password) {
             return res.status(400).json({
-                message: "Email and password are required"
+                message: "Email and password are required."
             });
         }
 
@@ -74,7 +75,7 @@ async function login(req, res) {
 
         if (!user) {
             return res.status(401).json({
-                message: "Invalid email or password"
+                message: "Invalid email or password."
             });
         }
 
@@ -82,13 +83,14 @@ async function login(req, res) {
 
         if (!passwordCorrect) {
             return res.status(401).json({
-                message: "Invalid email or password"
+                message: "Invalid email or password."
             });
         }
 
-        setAuthCookie(res, user);
+        const token = setAuthCookie(res, user);
 
         res.json({
+            token,
             user: {
                 id: user._id,
                 name: user.name,
