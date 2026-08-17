@@ -1,7 +1,7 @@
 const fs = require("fs");
 const Feedback = require("../models/Feedback");
 const { parseCSVFile } = require("../utils/csvImport");
-const { validateHeaders, validateRow } = require("../validators/csvValidator");
+const { validateHeaders, validateRow, findContentColumn, normalizeKey } = require("../validators/csvValidator");
 const { queueFeedbackAnalysisBulk } = require("../queues/feedbackJobProducer");
 const { processPendingFeedback } = require("../services/feedbackAiProcessor");
 
@@ -34,7 +34,7 @@ async function importFeedbackCSV(req, res) {
             const validation = validateRow(row, rowNumber);
 
             if (validation.valid) {
-                validRows.push(row);
+                validRows.push({ row, content: validation.content });
             } else {
                 rejectedRows.push({
                     rowNumber,
@@ -44,33 +44,52 @@ async function importFeedbackCSV(req, res) {
             }
         });
 
-        const feedbackDocuments = validRows.map((row) => {
-            const getVal = (possibleKeys) => {
+        const feedbackDocuments = validRows.map(({ row, content }) => {
+            const getValByKeys = (possibleKeys) => {
                 if (!row || typeof row !== "object") return "";
-                for (const k of possibleKeys) {
-                    if (row[k] !== undefined && row[k] !== null && String(row[k]).trim() !== "") {
-                        return String(row[k]).trim();
+                const rowKeys = Object.keys(row);
+                for (const pk of possibleKeys) {
+                    const normPk = normalizeKey(pk);
+                    for (const rk of rowKeys) {
+                        if (normalizeKey(rk) === normPk) {
+                            const val = row[rk];
+                            if (val !== undefined && val !== null && String(val).trim() !== "") {
+                                return String(val).trim();
+                            }
+                        }
                     }
                 }
                 return "";
             };
 
-            const content = getVal(["content", "feedback", "text", "comment", "message"]);
-            let rawChannel = getVal(["channel", "source", "type"]).toUpperCase();
-
+            let rawChannel = getValByKeys(["channel", "source", "type", "platform", "origin"]);
             let channel = "SUPPORT_TICKET";
-            if (rawChannel.includes("APP") || rawChannel.includes("STORE") || rawChannel.includes("REVIEW")) channel = "APP_STORE";
-            else if (rawChannel.includes("NPS") || rawChannel.includes("SURVEY")) channel = "NPS_SURVEY";
-            else if (rawChannel.includes("SALES") || rawChannel.includes("CALL")) channel = "SALES_CALL";
-            else if (rawChannel.includes("COMMUNITY") || rawChannel.includes("FORUM") || rawChannel.includes("POST")) channel = "COMMUNITY";
-            else if (rawChannel.includes("TICKET") || rawChannel.includes("SUPPORT")) channel = "SUPPORT_TICKET";
+            if (rawChannel) {
+                const upper = rawChannel.toUpperCase();
+                if (upper.includes("APP") || upper.includes("STORE") || upper.includes("REVIEW")) channel = "APP_STORE";
+                else if (upper.includes("NPS") || upper.includes("SURVEY")) channel = "NPS_SURVEY";
+                else if (upper.includes("SALES") || upper.includes("CALL")) channel = "SALES_CALL";
+                else if (upper.includes("COMMUNITY") || upper.includes("FORUM") || upper.includes("POST") || upper.includes("TWITTER") || upper.includes("SOCIAL")) channel = "COMMUNITY";
+                else if (upper.includes("TICKET") || upper.includes("SUPPORT") || upper.includes("EMAIL") || upper.includes("WEB")) channel = "SUPPORT_TICKET";
+                else channel = upper.substring(0, 30);
+            }
 
-            const customerLabel = getVal(["customerlabel", "customer", "user", "client", "name"]);
-            const createdAtStr = getVal(["createdat", "created_at", "date", "time"]);
+            const customerLabel = getValByKeys([
+                "customerlabel",
+                "customername",
+                "customer",
+                "user",
+                "username",
+                "client",
+                "name",
+                "author"
+            ]);
+
+            const createdAtStr = getValByKeys(["createdat", "created_at", "date", "timestamp", "time"]);
 
             const feedback = {
                 workspace: req.user.workspace,
-                content: content || "No content provided",
+                content: content,
                 channel,
                 customerLabel: customerLabel || null,
                 aiStatus: "PENDING",
