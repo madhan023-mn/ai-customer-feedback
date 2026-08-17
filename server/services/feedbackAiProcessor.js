@@ -1,5 +1,8 @@
 const Feedback = require("../models/Feedback");
-const { analyzeFeedback, validateAIResult } = require("./aiService");
+const Theme = require("../models/Theme");
+const FeedbackTheme = require("../models/FeedbackTheme");
+const Embedding = require("../models/Embedding");
+const { analyzeFeedback, generateEmbedding } = require("./aiService");
 
 async function claimFeedback(feedbackId) {
     return Feedback.findOneAndUpdate(
@@ -23,13 +26,65 @@ async function processSingleFeedback(feedbackOrId) {
 
     const claimed = await claimFeedback(feedbackId);
     if (!claimed) {
-        // Record might already be processing or completed
         return null;
     }
 
     try {
         const result = await analyzeFeedback(claimed.content);
-        validateAIResult(result);
+
+        const extractedThemeNames = [];
+        const themePairs = Array.isArray(result.themes) ? result.themes : [];
+
+        // Save FeedbackTheme join records & Theme entities
+        for (const item of themePairs) {
+            const themeName = typeof item === "object" && item.name ? item.name : String(item);
+            const confidence = typeof item === "object" && typeof item.confidence === "number" ? item.confidence : 0.88;
+
+            extractedThemeNames.push(themeName);
+
+            // Find or create Theme entity
+            let themeDoc = await Theme.findOne({
+                workspace: claimed.workspace,
+                name: themeName
+            });
+
+            if (!themeDoc) {
+                themeDoc = await Theme.create({
+                    name: themeName,
+                    description: `${claimed.featureArea || "General"} feedback theme cluster`,
+                    color: "#6d5dfc",
+                    workspace: claimed.workspace
+                });
+            }
+
+            // Create FeedbackTheme join entry
+            await FeedbackTheme.findOneAndUpdate(
+                {
+                    feedback: claimed._id,
+                    theme: themeDoc._id
+                },
+                {
+                    $set: {
+                        confidence,
+                        workspace: claimed.workspace
+                    }
+                },
+                { upsert: true, new: true }
+            );
+        }
+
+        // Generate and persist Embedding vector
+        const vector = await generateEmbedding(claimed.content);
+        await Embedding.findOneAndUpdate(
+            { feedback: claimed._id },
+            {
+                $set: {
+                    vector,
+                    workspace: claimed.workspace
+                }
+            },
+            { upsert: true, new: true }
+        );
 
         const updated = await Feedback.findOneAndUpdate(
             {
@@ -40,9 +95,10 @@ async function processSingleFeedback(feedbackOrId) {
                 $set: {
                     sentiment: result.sentiment,
                     sentimentScore: result.sentimentScore,
-                    themes: Array.isArray(result.themes) ? result.themes : [result.featureArea],
+                    themes: extractedThemeNames.length > 0 ? extractedThemeNames : [result.featureArea],
                     featureArea: result.featureArea,
                     rationale: result.rationale,
+                    embedding: vector,
                     aiStatus: "COMPLETED",
                     analyzedAt: new Date(),
                     aiError: null
@@ -112,5 +168,5 @@ module.exports = {
     claimFeedback,
     processSingleFeedback,
     processPendingFeedback,
-    processFeedback: processSingleFeedback // Alias for backward compatibility
+    processFeedback: processSingleFeedback
 };

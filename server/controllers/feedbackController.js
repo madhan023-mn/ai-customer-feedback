@@ -7,6 +7,7 @@ const {
     queueFeedbackAnalysis,
     queueFeedbackAnalysisBulk
 } = require("../queues/feedbackJobProducer");
+const { processPendingFeedback } = require("../services/feedbackAiProcessor");
 
 const aiResultSchema =
     require("../validators/aiValidator");
@@ -37,6 +38,7 @@ async function createFeedback(req, res) {
 
         // Queue AI analysis job
         await queueFeedbackAnalysis(feedback._id);
+        processPendingFeedback(5, req.user.workspace).catch(() => {});
 
         // Send response immediately
         res.status(201).json({
@@ -462,6 +464,7 @@ async function importCSV(req, res) {
 
         // Queue bulk jobs for AI processing in BullMQ
         await queueFeedbackAnalysisBulk(createdIds);
+        processPendingFeedback(created.length, req.user.workspace).catch(() => {});
 
         res.status(201).json({
             message: `Successfully imported ${created.length} feedback items and queued for AI analysis`,
@@ -568,6 +571,8 @@ async function simulateChannelIngestion(req, res) {
             await queueFeedbackAnalysis(feedback._id);
             createdItems.push(feedback);
         }
+
+        processPendingFeedback(createdItems.length, req.user.workspace).catch(() => {});
 
         res.status(201).json({
             message: `Successfully simulated ${targetChannel} sync! Queued ${createdItems.length} records for AI analysis.`,

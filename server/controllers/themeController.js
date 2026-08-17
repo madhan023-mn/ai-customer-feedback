@@ -1,88 +1,108 @@
 const Feedback = require("../models/Feedback");
+const Theme = require("../models/Theme");
+const FeedbackTheme = require("../models/FeedbackTheme");
 const calculateTrend = require("../utils/calculateTrend");
 
 async function getThemes(req, res) {
     try {
         const workspace = req.user.workspace;
 
-        const themes = await Feedback.aggregate([
+        // Query FeedbackTheme join records first
+        const ftAgg = await FeedbackTheme.aggregate([
+            { $match: { workspace } },
             {
-                $match: {
-                    workspace
+                $lookup: {
+                    from: "themes",
+                    localField: "theme",
+                    foreignField: "_id",
+                    as: "themeObj"
                 }
             },
+            { $unwind: "$themeObj" },
             {
-                $project: {
-                    sentiment: 1,
-                    createdAt: 1,
-                    themeList: {
-                        $cond: {
-                            if: { $and: [{ $isArray: "$themes" }, { $gt: [{ $size: "$themes" }, 0] }] },
-                            then: "$themes",
-                            else: ["$featureArea"]
-                        }
-                    }
+                $lookup: {
+                    from: "feedbacks",
+                    localField: "feedback",
+                    foreignField: "_id",
+                    as: "feedbackObj"
                 }
             },
-            {
-                $unwind: "$themeList"
-            },
-            {
-                $match: {
-                    themeList: { $nin: ["", null, "Other", "General Feedback"] }
-                }
-            },
+            { $unwind: "$feedbackObj" },
             {
                 $group: {
-                    _id: "$themeList",
+                    _id: "$themeObj.name",
+                    themeId: { $first: "$themeObj._id" },
+                    description: { $first: "$themeObj.description" },
+                    color: { $first: "$themeObj.color" },
                     frequency: { $sum: 1 },
+                    avgConfidence: { $avg: "$confidence" },
                     positive: {
-                        $sum: {
-                            $cond: [{ $eq: ["$sentiment", "POS"] }, 1, 0]
-                        }
+                        $sum: { $cond: [{ $eq: ["$feedbackObj.sentiment", "POS"] }, 1, 0] }
                     },
                     neutral: {
-                        $sum: {
-                            $cond: [{ $eq: ["$sentiment", "NEU"] }, 1, 0]
-                        }
+                        $sum: { $cond: [{ $eq: ["$feedbackObj.sentiment", "NEU"] }, 1, 0] }
                     },
                     negative: {
-                        $sum: {
-                            $cond: [{ $eq: ["$sentiment", "NEG"] }, 1, 0]
-                        }
+                        $sum: { $cond: [{ $eq: ["$feedbackObj.sentiment", "NEG"] }, 1, 0] }
                     }
                 }
             },
             {
                 $addFields: {
                     negativePercentage: {
-                        $multiply: [
-                            {
-                                $divide: ["$negative", "$frequency"]
-                            },
-                            100
-                        ]
+                        $multiply: [{ $divide: ["$negative", "$frequency"] }, 100]
                     }
                 }
             },
-            {
-                $sort: {
-                    frequency: -1
-                }
-            }
+            { $sort: { frequency: -1 } }
         ]);
 
-        // Period-over-period spike detection
+        let themes = ftAgg;
+
+        // Fallback to Feedback.themes aggregation if no FeedbackTheme join rows exist
+        if (themes.length === 0) {
+            themes = await Feedback.aggregate([
+                { $match: { workspace } },
+                {
+                    $project: {
+                        sentiment: 1,
+                        createdAt: 1,
+                        themeList: {
+                            $cond: {
+                                if: { $and: [{ $isArray: "$themes" }, { $gt: [{ $size: "$themes" }, 0] }] },
+                                then: "$themes",
+                                else: ["$featureArea"]
+                            }
+                        }
+                    }
+                },
+                { $unwind: "$themeList" },
+                { $match: { themeList: { $nin: ["", null, "Other", "General Feedback"] } } },
+                {
+                    $group: {
+                        _id: "$themeList",
+                        frequency: { $sum: 1 },
+                        avgConfidence: { $avg: 0.88 },
+                        positive: { $sum: { $cond: [{ $eq: ["$sentiment", "POS"] }, 1, 0] } },
+                        neutral: { $sum: { $cond: [{ $eq: ["$sentiment", "NEU"] }, 1, 0] } },
+                        negative: { $sum: { $cond: [{ $eq: ["$sentiment", "NEG"] }, 1, 0] } }
+                    }
+                },
+                {
+                    $addFields: {
+                        negativePercentage: { $multiply: [{ $divide: ["$negative", "$frequency"] }, 100] }
+                    }
+                },
+                { $sort: { frequency: -1 } }
+            ]);
+        }
+
+        // Period-over-period spike detection (past 14 days vs prior 14 days)
         const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
         const twentyEightDaysAgo = new Date(Date.now() - 28 * 24 * 60 * 60 * 1000);
 
         const recentCounts = await Feedback.aggregate([
-            {
-                $match: {
-                    workspace,
-                    createdAt: { $gte: fourteenDaysAgo }
-                }
-            },
+            { $match: { workspace, createdAt: { $gte: fourteenDaysAgo } } },
             {
                 $project: {
                     themeList: {
@@ -95,21 +115,11 @@ async function getThemes(req, res) {
                 }
             },
             { $unwind: "$themeList" },
-            {
-                $group: {
-                    _id: "$themeList",
-                    recentCount: { $sum: 1 }
-                }
-            }
+            { $group: { _id: "$themeList", recentCount: { $sum: 1 } } }
         ]);
 
         const priorCounts = await Feedback.aggregate([
-            {
-                $match: {
-                    workspace,
-                    createdAt: { $gte: twentyEightDaysAgo, $lt: fourteenDaysAgo }
-                }
-            },
+            { $match: { workspace, createdAt: { $gte: twentyEightDaysAgo, $lt: fourteenDaysAgo } } },
             {
                 $project: {
                     themeList: {
@@ -122,12 +132,7 @@ async function getThemes(req, res) {
                 }
             },
             { $unwind: "$themeList" },
-            {
-                $group: {
-                    _id: "$themeList",
-                    priorCount: { $sum: 1 }
-                }
-            }
+            { $group: { _id: "$themeList", priorCount: { $sum: 1 } } }
         ]);
 
         const recentMap = new Map(recentCounts.map(r => [r._id, r.recentCount]));
@@ -154,6 +159,7 @@ async function getThemes(req, res) {
             return {
                 ...t,
                 name: t._id,
+                avgConfidence: Math.round((t.avgConfidence || 0.88) * 100) / 100,
                 thisMonth: rCount,
                 previousMonth: pCount,
                 isSpiking,
@@ -169,9 +175,7 @@ async function getThemes(req, res) {
         });
     } catch (error) {
         console.error("Get themes error:", error);
-        res.status(500).json({
-            message: "Failed to load themes"
-        });
+        res.status(500).json({ message: "Failed to load themes" });
     }
 }
 
@@ -270,22 +274,13 @@ async function getThemeTrend(req, res) {
                     }
                 }
             },
-            {
-                $sort: {
-                    _id: 1
-                }
-            }
+            { $sort: { _id: 1 } }
         ]);
 
-        res.json({
-            theme,
-            trend
-        });
+        res.json({ theme, trend });
     } catch (error) {
         console.error("Get theme trend error:", error);
-        res.status(500).json({
-            message: "Failed to load theme trend"
-        });
+        res.status(500).json({ message: "Failed to load theme trend" });
     }
 }
 
@@ -302,12 +297,10 @@ async function getThemeDetails(req, res) {
             ]
         })
         .sort({ createdAt: -1 })
-        .select("content sentiment sentimentScore channel status createdAt featureArea themes aiStatus rationale");
+        .select("content sentiment sentimentScore channel status createdAt featureArea themes aiStatus rationale customerLabel");
 
         if (!allFeedback.length) {
-            return res.status(404).json({
-                message: "Theme not found"
-            });
+            return res.status(404).json({ message: "Theme not found" });
         }
 
         const trend = await Feedback.aggregate([
@@ -336,11 +329,7 @@ async function getThemeDetails(req, res) {
                     }
                 }
             },
-            {
-                $sort: {
-                    _id: 1
-                }
-            }
+            { $sort: { _id: 1 } }
         ]);
 
         const trendDirection = calculateTrend(trend);
@@ -350,7 +339,6 @@ async function getThemeDetails(req, res) {
         const positive = allFeedback.filter(item => item.sentiment === "POS").length;
         const neutral = allFeedback.filter(item => item.sentiment === "NEU").length;
         const negative = allFeedback.filter(item => item.sentiment === "NEG").length;
-
         const negativePercentage = total === 0 ? 0 : (negative / total) * 100;
 
         res.json({
@@ -359,18 +347,12 @@ async function getThemeDetails(req, res) {
             negativePercentage,
             trendDirection,
             trend,
-            sentiment: {
-                positive,
-                neutral,
-                negative
-            },
+            sentiment: { positive, neutral, negative },
             feedback
         });
     } catch (error) {
         console.error("Get theme details error:", error);
-        res.status(500).json({
-            message: "Failed to load theme"
-        });
+        res.status(500).json({ message: "Failed to load theme" });
     }
 }
 

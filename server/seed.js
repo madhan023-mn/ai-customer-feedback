@@ -7,55 +7,78 @@ dotenv.config();
 const Workspace = require("./models/Workspace");
 const User = require("./models/User");
 const Feedback = require("./models/Feedback");
+const Theme = require("./models/Theme");
+const FeedbackTheme = require("./models/FeedbackTheme");
+const Embedding = require("./models/Embedding");
 const Insight = require("./models/Insight");
 
 const MONGO_URI = process.env.MONGO_URI || process.env.DATABASE_URL || "mongodb://127.0.0.1:27017/loop_db";
 
 const CHANNELS = ["SUPPORT_TICKET", "APP_STORE", "NPS_SURVEY", "SALES_CALL", "COMMUNITY"];
-const FEATURE_AREAS = [
-    "Checkout",
-    "Onboarding",
-    "Dashboard",
-    "Payments",
-    "Mobile",
-    "Search",
-    "Support",
-    "Notifications",
-    "Performance",
-    "Authentication"
+
+const INITIAL_THEMES = [
+    { name: "Checkout Payment Failure", description: "Credit card & payment gateway timeouts during checkout", color: "#ef4444" },
+    { name: "Onboarding Latency", description: "Friction and delay during initial user team setup tour", color: "#f59e0b" },
+    { name: "Team Invitation Flow", description: "Issues inviting multi-user seat members to workspace", color: "#3b82f6" },
+    { name: "Dashboard UI", description: "Performance and satisfaction regarding dashboard layout", color: "#10b981" },
+    { name: "Payment Gateway Timeout", description: "Stripe and billing provider latency errors", color: "#8b5cf6" },
+    { name: "Mobile App Stability", description: "iOS and Android mobile app crash reports", color: "#ec4899" },
+    { name: "Search Filter Speed", description: "Fast filtering across tags and ticket categories", color: "#14b8a6" },
+    { name: "Support Ticket SLA", description: "Response times and support agent SLA metrics", color: "#6366f1" },
+    { name: "Notification Latency", description: "SMS 2FA and email verification delivery delays", color: "#f97316" },
+    { name: "Performance Bottleneck", description: "System latency when aggregating 90-day chart windows", color: "#64748b" }
 ];
 
 const RAW_FEEDBACK_TEMPLATES = [
     // Onboarding
-    { content: "Onboarding took forever — I couldn't figure out how to invite my team members.", channel: "SUPPORT_TICKET", sentiment: "NEG", featureArea: "Onboarding", score: -0.8, rationale: "Frustration with multi-user invite flow during onboarding." },
-    { content: "The interactive onboarding tour was crystal clear and got our team set up in 5 minutes!", channel: "NPS_SURVEY", sentiment: "POS", featureArea: "Onboarding", score: 0.9, rationale: "Positive reaction to interactive setup guide." },
-    { content: "Onboarding email sequence links were broken for half of our new signups.", channel: "SUPPORT_TICKET", sentiment: "NEG", featureArea: "Onboarding", score: -0.7, rationale: "Technical issue with email verification links." },
-    { content: "Step-by-step wizard is decent, but needs a skip button for experienced users.", channel: "COMMUNITY", sentiment: "NEU", featureArea: "Onboarding", score: 0.1, rationale: "Usability suggestion for setup flow." },
+    { content: "Onboarding took forever — I couldn't figure out how to invite my team members.", channel: "SUPPORT_TICKET", sentiment: "NEG", featureArea: "Onboarding", score: -0.8, themeName: "Team Invitation Flow", confidence: 0.94 },
+    { content: "The interactive onboarding tour was crystal clear and got our team set up in 5 minutes!", channel: "NPS_SURVEY", sentiment: "POS", featureArea: "Onboarding", score: 0.9, themeName: "Onboarding Latency", confidence: 0.92 },
+    { content: "Onboarding email sequence links were broken for half of our new signups.", channel: "SUPPORT_TICKET", sentiment: "NEG", featureArea: "Onboarding", score: -0.7, themeName: "Onboarding Latency", confidence: 0.88 },
+    { content: "Step-by-step wizard is decent, but needs a skip button for experienced users.", channel: "COMMUNITY", sentiment: "NEU", featureArea: "Onboarding", score: 0.1, themeName: "Onboarding Latency", confidence: 0.85 },
 
     // Checkout & Payments
-    { content: "Checkout page timed out twice while entering credit card billing information.", channel: "SUPPORT_TICKET", sentiment: "NEG", featureArea: "Checkout", score: -0.85, rationale: "High severity payment processing failure." },
-    { content: "Seamless payment checkout experience. Stripe integration is fast and smooth.", channel: "APP_STORE", sentiment: "POS", featureArea: "Checkout", score: 0.95, rationale: "Praise for checkout speed." },
-    { content: "Prospect wants SAML SSO & automated invoice billing before signing annual contract.", channel: "SALES_CALL", sentiment: "NEG", featureArea: "Payments", score: -0.5, rationale: "Sales blocker due to enterprise billing requirements." },
-    { content: "Can we get Apple Pay and PayPal support on the web checkout screen?", channel: "COMMUNITY", sentiment: "NEU", featureArea: "Payments", score: 0.2, rationale: "Feature request for additional payment methods." },
+    { content: "Checkout page timed out twice while entering credit card billing information.", channel: "SUPPORT_TICKET", sentiment: "NEG", featureArea: "Checkout", score: -0.85, themeName: "Checkout Payment Failure", confidence: 0.96 },
+    { content: "Seamless payment checkout experience. Stripe integration is fast and smooth.", channel: "APP_STORE", sentiment: "POS", featureArea: "Checkout", score: 0.95, themeName: "Payment Gateway Timeout", confidence: 0.91 },
+    { content: "Prospect wants SAML SSO & automated invoice billing before signing annual contract.", channel: "SALES_CALL", sentiment: "NEG", featureArea: "Payments", score: -0.5, themeName: "Payment Gateway Timeout", confidence: 0.89 },
+    { content: "Can we get Apple Pay and PayPal support on the web checkout screen?", channel: "COMMUNITY", sentiment: "NEU", featureArea: "Payments", score: 0.2, themeName: "Checkout Payment Failure", confidence: 0.87 },
 
     // Dashboard & Performance
-    { content: "The new dashboard is gorgeous and finally fast! Huge improvement over v1.", channel: "APP_STORE", sentiment: "POS", featureArea: "Dashboard", score: 0.9, rationale: "User delight over dashboard UI refresh." },
-    { content: "Dashboard charts lag significantly when filtering over a 90-day historical window.", channel: "SUPPORT_TICKET", sentiment: "NEG", featureArea: "Performance", score: -0.75, rationale: "Performance bottleneck on large data aggregation." },
-    { content: "Real-time analytics updates are super helpful during live marketing campaigns.", channel: "NPS_SURVEY", sentiment: "POS", featureArea: "Dashboard", score: 0.85, rationale: "High satisfaction with real-time data metrics." },
-    { content: "Would love the ability to export dashboard line charts to SVG and PNG formats.", channel: "COMMUNITY", sentiment: "NEU", featureArea: "Dashboard", score: 0.3, rationale: "Feature request for chart exports." },
+    { content: "The new dashboard is gorgeous and finally fast! Huge improvement over v1.", channel: "APP_STORE", sentiment: "POS", featureArea: "Dashboard", score: 0.9, themeName: "Dashboard UI", confidence: 0.95 },
+    { content: "Dashboard charts lag significantly when filtering over a 90-day historical window.", channel: "SUPPORT_TICKET", sentiment: "NEG", featureArea: "Performance", score: -0.75, themeName: "Performance Bottleneck", confidence: 0.93 },
+    { content: "Real-time analytics updates are super helpful during live marketing campaigns.", channel: "NPS_SURVEY", sentiment: "POS", featureArea: "Dashboard", score: 0.85, themeName: "Dashboard UI", confidence: 0.90 },
+    { content: "Would love the ability to export dashboard line charts to SVG and PNG formats.", channel: "COMMUNITY", sentiment: "NEU", featureArea: "Dashboard", score: 0.3, themeName: "Dashboard UI", confidence: 0.86 },
 
     // Mobile & Search
-    { content: "Mobile app crashes on launch when opening on iOS 17.4 device.", channel: "APP_STORE", sentiment: "NEG", featureArea: "Mobile", score: -0.9, rationale: "Critical mobile app stability bug." },
-    { content: "Mobile app navigation is slick, but push notifications are delayed by 10 minutes.", channel: "APP_STORE", sentiment: "NEU", featureArea: "Mobile", score: 0.0, rationale: "Mixed feedback regarding push latency." },
-    { content: "Search filters across customer tags are super fast and pinpoint exact tickets instantly.", channel: "NPS_SURVEY", sentiment: "POS", featureArea: "Search", score: 0.88, rationale: "High satisfaction with search filter speed." },
-    { content: "Full-text search doesn't highlight matching search terms inside feedback text.", channel: "COMMUNITY", sentiment: "NEU", featureArea: "Search", score: 0.15, rationale: "UX enhancement for search results." },
+    { content: "Mobile app crashes on launch when opening on iOS 17.4 device.", channel: "APP_STORE", sentiment: "NEG", featureArea: "Mobile", score: -0.9, themeName: "Mobile App Stability", confidence: 0.97 },
+    { content: "Mobile app navigation is slick, but push notifications are delayed by 10 minutes.", channel: "APP_STORE", sentiment: "NEU", featureArea: "Mobile", score: 0.0, themeName: "Mobile App Stability", confidence: 0.88 },
+    { content: "Search filters across customer tags are super fast and pinpoint exact tickets instantly.", channel: "NPS_SURVEY", sentiment: "POS", featureArea: "Search", score: 0.88, themeName: "Search Filter Speed", confidence: 0.92 },
+    { content: "Full-text search doesn't highlight matching search terms inside feedback text.", channel: "COMMUNITY", sentiment: "NEU", featureArea: "Search", score: 0.15, themeName: "Search Filter Speed", confidence: 0.84 },
 
     // Support & Auth
-    { content: "Support ticket resolution took 4 days with zero updates from the customer team.", channel: "SUPPORT_TICKET", sentiment: "NEG", featureArea: "Support", score: -0.82, rationale: "Customer dissatisfaction with support SLA." },
-    { content: "Customer support rep Alex was insanely helpful and fixed our API token in minutes!", channel: "NPS_SURVEY", sentiment: "POS", featureArea: "Support", score: 0.96, rationale: "Praise for support rep responsiveness." },
-    { content: "2FA authentication SMS codes are taking over 5 minutes to deliver on Verizon.", channel: "SUPPORT_TICKET", sentiment: "NEG", featureArea: "Authentication", score: -0.7, rationale: "SMS 2FA delivery latency." },
-    { content: "OAuth login with Google & GitHub works flawlessly.", channel: "APP_STORE", sentiment: "POS", featureArea: "Authentication", score: 0.9, rationale: "Positive review for social login." }
+    { content: "Support ticket resolution took 4 days with zero updates from the customer team.", channel: "SUPPORT_TICKET", sentiment: "NEG", featureArea: "Support", score: -0.82, themeName: "Support Ticket SLA", confidence: 0.94 },
+    { content: "Customer support rep Alex was insanely helpful and fixed our API token in minutes!", channel: "NPS_SURVEY", sentiment: "POS", featureArea: "Support", score: 0.96, themeName: "Support Ticket SLA", confidence: 0.91 },
+    { content: "2FA authentication SMS codes are taking over 5 minutes to deliver on Verizon.", channel: "SUPPORT_TICKET", sentiment: "NEG", featureArea: "Authentication", score: -0.7, themeName: "Notification Latency", confidence: 0.90 },
+    { content: "OAuth login with Google & GitHub works flawlessly.", channel: "APP_STORE", sentiment: "POS", featureArea: "Authentication", score: 0.9, themeName: "Notification Latency", confidence: 0.89 }
 ];
+
+function generateLocalVector(text, dimensions = 64) {
+    const vector = new Array(dimensions).fill(0);
+    const words = String(text || "").toLowerCase().match(/\w+/g) || [];
+    if (words.length === 0) return vector;
+
+    words.forEach((word) => {
+        let hash = 0;
+        for (let i = 0; i < word.length; i++) {
+            hash = (hash << 5) - hash + word.charCodeAt(i);
+            hash |= 0;
+        }
+        const index = Math.abs(hash) % dimensions;
+        vector[index] += 1;
+    });
+
+    const magnitude = Math.sqrt(vector.reduce((sum, val) => sum + val * val, 0));
+    return magnitude === 0 ? vector : vector.map((val) => val / magnitude);
+}
 
 async function seedDatabase() {
     try {
@@ -68,6 +91,9 @@ async function seedDatabase() {
         await Workspace.deleteMany({});
         await User.deleteMany({});
         await Feedback.deleteMany({});
+        await Theme.deleteMany({});
+        await FeedbackTheme.deleteMany({});
+        await Embedding.deleteMany({});
         await Insight.deleteMany({});
 
         // Create Workspace
@@ -80,7 +106,7 @@ async function seedDatabase() {
         console.log("Creating Demo Users (Admin, Analyst, Viewer)...");
         const passwordHash = await bcrypt.hash("password123", 10);
 
-        const adminUser = await User.create({
+        await User.create({
             name: "Sarah Admin",
             email: "admin@acme.com",
             passwordHash,
@@ -88,7 +114,7 @@ async function seedDatabase() {
             workspace: workspace._id
         });
 
-        const analystUser = await User.create({
+        await User.create({
             name: "Alex Analyst",
             email: "analyst@acme.com",
             passwordHash,
@@ -104,21 +130,32 @@ async function seedDatabase() {
             workspace: workspace._id
         });
 
-        console.log("Created users:");
-        console.log(" - Admin: admin@acme.com / password123");
-        console.log(" - Analyst: analyst@acme.com / password123");
-        console.log(" - Viewer: viewer@acme.com / password123");
+        // Create Theme Entities
+        console.log("Creating Theme entities...");
+        const createdThemesMap = new Map();
+        for (const t of INITIAL_THEMES) {
+            const themeDoc = await Theme.create({
+                name: t.name,
+                description: t.description,
+                color: t.color,
+                workspace: workspace._id
+            });
+            createdThemesMap.set(t.name, themeDoc);
+        }
 
         // Generate 125 Feedback Records
-        console.log("Generating 125 realistic feedback records across channels...");
-        const feedbackDocs = [];
+        console.log("Generating 125 feedback records, vectors, and FeedbackTheme join entries...");
         const now = Date.now();
         const dayMs = 24 * 60 * 60 * 1000;
+
+        const feedbackDocs = [];
+        const embeddingDocs = [];
+        const feedbackThemeDocs = [];
 
         for (let i = 0; i < 125; i++) {
             const template = RAW_FEEDBACK_TEMPLATES[i % RAW_FEEDBACK_TEMPLATES.length];
             const channel = CHANNELS[i % CHANNELS.length];
-            const daysOffset = Math.floor(Math.random() * 45); // Spread over past 45 days
+            const daysOffset = Math.floor(Math.random() * 45);
             const createdAt = new Date(now - daysOffset * dayMs);
 
             const statuses = ["NEW", "REVIEWED", "ACTIONED"];
@@ -135,39 +172,49 @@ async function seedDatabase() {
                 "Beta Tester"
             ];
 
-            const themeMap = {
-                "Checkout": ["Checkout Problem", "Checkout Payment Failure"],
-                "Onboarding": ["Onboarding Latency", "Team Invitation Flow"],
-                "Dashboard": ["Dashboard UI", "Realtime Metrics"],
-                "Payments": ["Payment Gateway Timeout", "Billing Invoice"],
-                "Mobile": ["Mobile Crash", "Push Notifications"],
-                "Search": ["Search Filter Speed", "Result Highlighting"],
-                "Support": ["Support Ticket SLA", "Agent Responsiveness"],
-                "Notifications": ["Notification Latency", "Email Verification"],
-                "Performance": ["Performance Bottleneck", "System Latency"],
-                "Authentication": ["Login Issues", "Auth 2FA SMS"]
-            };
-
-            const extractedThemes = themeMap[template.featureArea] || [template.featureArea];
+            const contentText = `${template.content} (Ref #${1000 + i})`;
+            const vector = generateLocalVector(contentText);
+            const feedbackId = new mongoose.Types.ObjectId();
 
             feedbackDocs.push({
-                content: `${template.content} (Ref #${1000 + i})`,
+                _id: feedbackId,
+                content: contentText,
                 channel,
                 customerLabel: customerLabels[i % customerLabels.length],
                 sentiment: template.sentiment,
                 sentimentScore: template.score,
-                themes: extractedThemes,
+                themes: [template.themeName],
                 featureArea: template.featureArea,
-                rationale: template.rationale,
+                rationale: "Classified by AI Feedback Intelligence Engine.",
                 status,
                 aiStatus: "COMPLETED",
+                embedding: vector,
+                workspace: workspace._id,
+                createdAt
+            });
+
+            embeddingDocs.push({
+                feedback: feedbackId,
+                vector,
+                workspace: workspace._id,
+                createdAt
+            });
+
+            const themeObj = createdThemesMap.get(template.themeName) || Array.from(createdThemesMap.values())[0];
+            feedbackThemeDocs.push({
+                feedback: feedbackId,
+                theme: themeObj._id,
+                confidence: template.confidence || 0.90,
                 workspace: workspace._id,
                 createdAt
             });
         }
 
         await Feedback.insertMany(feedbackDocs);
-        console.log("Successfully inserted 125 feedback records!");
+        await Embedding.insertMany(embeddingDocs);
+        await FeedbackTheme.insertMany(feedbackThemeDocs);
+
+        console.log("Successfully inserted 125 Feedback records, Embedding vectors, and FeedbackTheme join rows!");
 
         // Create initial AI Insights
         console.log("Creating initial AI insights...");

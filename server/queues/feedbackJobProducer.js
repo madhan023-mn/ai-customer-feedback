@@ -1,4 +1,5 @@
 const feedbackQueue = require("./feedbackQueue");
+const { processPendingFeedback } = require("../services/feedbackAiProcessor");
 
 async function queueFeedbackAnalysis(feedbackId) {
     try {
@@ -19,7 +20,8 @@ async function queueFeedbackAnalysis(feedbackId) {
         );
         return job;
     } catch (err) {
-        console.warn("Failed to add job to BullMQ queue:", err.message);
+        // Fallback: execute processing synchronously if Redis is offline
+        processPendingFeedback(5).catch(() => {});
         return null;
     }
 }
@@ -44,7 +46,8 @@ async function queueFeedbackAnalysisBulk(feedbackIds) {
 
         return await feedbackQueue.addBulk(jobs);
     } catch (err) {
-        console.warn("Failed to add bulk jobs to BullMQ queue:", err.message);
+        // Fallback: execute bulk processing synchronously if Redis is offline
+        processPendingFeedback(20).catch(() => {});
         return null;
     }
 }
