@@ -210,6 +210,101 @@ function Feedback() {
                 </div>
             )}
 
+            {/* Saved Views / Segment Presets */}
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "12px", alignItems: "center" }}>
+                <span style={{ fontSize: "0.8rem", color: "var(--text-muted)", fontWeight: 600 }}>Saved Views:</span>
+                <button
+                    type="button"
+                    className="badge"
+                    style={{
+                        cursor: "pointer",
+                        background: sentiment === "ALL" && featureArea === "ALL" && status === "ALL" ? "var(--primary)" : "white",
+                        color: sentiment === "ALL" && featureArea === "ALL" && status === "ALL" ? "white" : "var(--text-main)",
+                        border: "1px solid var(--border-light)",
+                        padding: "4px 10px",
+                        fontSize: "0.78rem"
+                    }}
+                    onClick={() => { setSentiment("ALL"); setFeatureArea("ALL"); setStatus("ALL"); setChannel("ALL"); setPage(1); }}
+                >
+                    All Feedback
+                </button>
+                <button
+                    type="button"
+                    className="badge"
+                    style={{
+                        cursor: "pointer",
+                        background: sentiment === "NEG" ? "#ef4444" : "#fff1f2",
+                        color: sentiment === "NEG" ? "white" : "#be123c",
+                        border: "1px solid #fecdd3",
+                        padding: "4px 10px",
+                        fontSize: "0.78rem"
+                    }}
+                    onClick={() => { setSentiment("NEG"); setFeatureArea("ALL"); setStatus("ALL"); setPage(1); }}
+                >
+                    Negative Complaints
+                </button>
+                <button
+                    type="button"
+                    className="badge"
+                    style={{
+                        cursor: "pointer",
+                        background: featureArea === "Payments" ? "var(--primary)" : "white",
+                        color: featureArea === "Payments" ? "white" : "var(--text-main)",
+                        border: "1px solid var(--border-light)",
+                        padding: "4px 10px",
+                        fontSize: "0.78rem"
+                    }}
+                    onClick={() => { setFeatureArea("Payments"); setSentiment("ALL"); setStatus("ALL"); setPage(1); }}
+                >
+                    Payment Issues
+                </button>
+                <button
+                    type="button"
+                    className="badge"
+                    style={{
+                        cursor: "pointer",
+                        background: featureArea === "Mobile" ? "var(--primary)" : "white",
+                        color: featureArea === "Mobile" ? "white" : "var(--text-main)",
+                        border: "1px solid var(--border-light)",
+                        padding: "4px 10px",
+                        fontSize: "0.78rem"
+                    }}
+                    onClick={() => { setFeatureArea("Mobile"); setSentiment("ALL"); setStatus("ALL"); setPage(1); }}
+                >
+                    Mobile Experience
+                </button>
+                <button
+                    type="button"
+                    className="badge"
+                    style={{
+                        cursor: "pointer",
+                        background: sentiment === "POS" ? "#10b981" : "#f0fdf4",
+                        color: sentiment === "POS" ? "white" : "#15803d",
+                        border: "1px solid #bbf7d0",
+                        padding: "4px 10px",
+                        fontSize: "0.78rem"
+                    }}
+                    onClick={() => { setSentiment("POS"); setFeatureArea("ALL"); setStatus("ALL"); setPage(1); }}
+                >
+                    Positive Praise
+                </button>
+                <button
+                    type="button"
+                    className="badge"
+                    style={{
+                        cursor: "pointer",
+                        background: status === "NEW" ? "#6366f1" : "#eef2ff",
+                        color: status === "NEW" ? "white" : "#4338ca",
+                        border: "1px solid #c7d2fe",
+                        padding: "4px 10px",
+                        fontSize: "0.78rem"
+                    }}
+                    onClick={() => { setStatus("NEW"); setSentiment("ALL"); setFeatureArea("ALL"); setPage(1); }}
+                >
+                    Untriaged (NEW)
+                </button>
+            </div>
+
             {/* Filter Bar */}
             <div className="filter-bar">
                 <form onSubmit={handleSearchSubmit} className="search-wrapper">

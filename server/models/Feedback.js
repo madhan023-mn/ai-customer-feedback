@@ -10,14 +10,14 @@ const feedbackSchema = new mongoose.Schema(
 
         channel: {
             type: String,
-            enum: [
-                "SUPPORT_TICKET",
-                "APP_STORE",
-                "NPS_SURVEY",
-                "SALES_CALL",
-                "COMMUNITY"
-            ],
-            required: true
+            required: true,
+            default: "SUPPORT_TICKET"
+        },
+
+        sourceRef: {
+            type: String,
+            trim: true,
+            default: null
         },
 
         customerLabel: {
