@@ -1,26 +1,44 @@
-import React from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import React, { Suspense, lazy } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import Dashboard from "./pages/Dashboard";
-import Feedback from "./pages/Feedback";
-import AddFeedback from "./pages/AddFeedback";
-import ImportFeedback from "./pages/ImportFeedback";
-import FeedbackDetails from "./pages/FeedbackDetails";
-import Members from "./pages/Members";
+// Code-split pages for instant initial loading & optimal performance
+const Landing = lazy(() => import("./pages/Landing"));
+const Login = lazy(() => import("./pages/Login"));
+const Register = lazy(() => import("./pages/Register"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Feedback = lazy(() => import("./pages/Feedback"));
+const AddFeedback = lazy(() => import("./pages/AddFeedback"));
+const ImportFeedback = lazy(() => import("./pages/ImportFeedback"));
+const FeedbackDetails = lazy(() => import("./pages/FeedbackDetails"));
+const Members = lazy(() => import("./pages/Members"));
+const Themes = lazy(() => import("./pages/Themes"));
+const ThemeDetails = lazy(() => import("./pages/ThemeDetails"));
+const Insights = lazy(() => import("./pages/Insights"));
+const AskLoop = lazy(() => import("./pages/AskLoop"));
+const Reports = lazy(() => import("./pages/Reports"));
+const Analytics = lazy(() => import("./pages/Analytics"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const Forbidden = lazy(() => import("./pages/Forbidden"));
 
 import ProtectedRoute from "./components/ProtectedRoute";
 import Navbar from "./components/Navbar";
 
-import Themes from "./pages/Themes";
-import ThemeDetails from "./pages/ThemeDetails";
-import Insights from "./pages/Insights";
-import AskLoop from "./pages/AskLoop";
-import Reports from "./pages/Reports";
-import Analytics from "./pages/Analytics";
-import NotFound from "./pages/NotFound";
-import Forbidden from "./pages/Forbidden";
+function PageLoader() {
+    return (
+        <div style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            minHeight: "60vh",
+            gap: "1rem",
+            color: "var(--text-muted)"
+        }}>
+            <div className="spinner" style={{ width: "36px", height: "36px" }}></div>
+            <span style={{ fontSize: "0.9rem" }}>Loading Project LOOP...</span>
+        </div>
+    );
+}
 
 function AppLayout({ children }) {
     return (
@@ -36,191 +54,195 @@ function AppLayout({ children }) {
 function App() {
     return (
         <BrowserRouter>
-            <Routes>
-                {/* Public Routes */}
-                <Route path="/" element={<Login />} />
-                <Route path="/register" element={<Register />} />
+            <Suspense fallback={<PageLoader />}>
+                <Routes>
+                    {/* Front Page / Landing */}
+                    <Route path="/" element={<Landing />} />
 
-                {/* Protected Workspace Routes */}
-                <Route
-                    path="/dashboard"
-                    element={
-                        <ProtectedRoute>
-                            <AppLayout>
-                                <Dashboard />
-                            </AppLayout>
-                        </ProtectedRoute>
-                    }
-                />
+                    {/* Public Authentication Pages */}
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/register" element={<Register />} />
 
-                <Route
-                    path="/analytics"
-                    element={
-                        <ProtectedRoute>
-                            <AppLayout>
-                                <Analytics />
-                            </AppLayout>
-                        </ProtectedRoute>
-                    }
-                />
+                    {/* Protected Workspace Routes */}
+                    <Route
+                        path="/dashboard"
+                        element={
+                            <ProtectedRoute>
+                                <AppLayout>
+                                    <Dashboard />
+                                </AppLayout>
+                            </ProtectedRoute>
+                        }
+                    />
 
-                <Route
-                    path="/feedback"
-                    element={
-                        <ProtectedRoute>
-                            <AppLayout>
-                                <Feedback />
-                            </AppLayout>
-                        </ProtectedRoute>
-                    }
-                />
+                    <Route
+                        path="/analytics"
+                        element={
+                            <ProtectedRoute>
+                                <AppLayout>
+                                    <Analytics />
+                                </AppLayout>
+                            </ProtectedRoute>
+                        }
+                    />
 
-                <Route
-                    path="/feedback/add"
-                    element={
-                        <ProtectedRoute>
-                            <AppLayout>
-                                <AddFeedback />
-                            </AppLayout>
-                        </ProtectedRoute>
-                    }
-                />
+                    <Route
+                        path="/feedback"
+                        element={
+                            <ProtectedRoute>
+                                <AppLayout>
+                                    <Feedback />
+                                </AppLayout>
+                            </ProtectedRoute>
+                        }
+                    />
 
-                <Route
-                    path="/feedback/new"
-                    element={
-                        <ProtectedRoute>
-                            <AppLayout>
-                                <AddFeedback />
-                            </AppLayout>
-                        </ProtectedRoute>
-                    }
-                />
+                    <Route
+                        path="/feedback/add"
+                        element={
+                            <ProtectedRoute>
+                                <AppLayout>
+                                    <AddFeedback />
+                                </AppLayout>
+                            </ProtectedRoute>
+                        }
+                    />
 
-                <Route
-                    path="/feedback/import"
-                    element={
-                        <ProtectedRoute>
-                            <AppLayout>
-                                <ImportFeedback />
-                            </AppLayout>
-                        </ProtectedRoute>
-                    }
-                />
+                    <Route
+                        path="/feedback/new"
+                        element={
+                            <ProtectedRoute>
+                                <AppLayout>
+                                    <AddFeedback />
+                                </AppLayout>
+                            </ProtectedRoute>
+                        }
+                    />
 
-                <Route
-                    path="/feedback/:id"
-                    element={
-                        <ProtectedRoute>
-                            <AppLayout>
-                                <FeedbackDetails />
-                            </AppLayout>
-                        </ProtectedRoute>
-                    }
-                />
+                    <Route
+                        path="/feedback/import"
+                        element={
+                            <ProtectedRoute>
+                                <AppLayout>
+                                    <ImportFeedback />
+                                </AppLayout>
+                            </ProtectedRoute>
+                        }
+                    />
 
-                <Route
-                    path="/themes"
-                    element={
-                        <ProtectedRoute>
-                            <AppLayout>
-                                <Themes />
-                            </AppLayout>
-                        </ProtectedRoute>
-                    }
-                />
+                    <Route
+                        path="/feedback/:id"
+                        element={
+                            <ProtectedRoute>
+                                <AppLayout>
+                                    <FeedbackDetails />
+                                </AppLayout>
+                            </ProtectedRoute>
+                        }
+                    />
 
-                <Route
-                    path="/themes/:theme"
-                    element={
-                        <ProtectedRoute>
-                            <AppLayout>
-                                <ThemeDetails />
-                            </AppLayout>
-                        </ProtectedRoute>
-                    }
-                />
+                    <Route
+                        path="/themes"
+                        element={
+                            <ProtectedRoute>
+                                <AppLayout>
+                                    <Themes />
+                                </AppLayout>
+                            </ProtectedRoute>
+                        }
+                    />
 
-                <Route
-                    path="/insights"
-                    element={
-                        <ProtectedRoute>
-                            <AppLayout>
-                                <Insights />
-                            </AppLayout>
-                        </ProtectedRoute>
-                    }
-                />
+                    <Route
+                        path="/themes/:theme"
+                        element={
+                            <ProtectedRoute>
+                                <AppLayout>
+                                    <ThemeDetails />
+                                </AppLayout>
+                            </ProtectedRoute>
+                        }
+                    />
 
-                <Route
-                    path="/ask"
-                    element={
-                        <ProtectedRoute>
-                            <AppLayout>
-                                <AskLoop />
-                            </AppLayout>
-                        </ProtectedRoute>
-                    }
-                />
+                    <Route
+                        path="/insights"
+                        element={
+                            <ProtectedRoute>
+                                <AppLayout>
+                                    <Insights />
+                                </AppLayout>
+                            </ProtectedRoute>
+                        }
+                    />
 
-                <Route
-                    path="/insights/ask"
-                    element={
-                        <ProtectedRoute>
-                            <AppLayout>
-                                <AskLoop />
-                            </AppLayout>
-                        </ProtectedRoute>
-                    }
-                />
+                    <Route
+                        path="/ask"
+                        element={
+                            <ProtectedRoute>
+                                <AppLayout>
+                                    <AskLoop />
+                                </AppLayout>
+                            </ProtectedRoute>
+                        }
+                    />
 
-                <Route
-                    path="/reports"
-                    element={
-                        <ProtectedRoute>
-                            <AppLayout>
-                                <Reports />
-                            </AppLayout>
-                        </ProtectedRoute>
-                    }
-                />
+                    <Route
+                        path="/insights/ask"
+                        element={
+                            <ProtectedRoute>
+                                <AppLayout>
+                                    <AskLoop />
+                                </AppLayout>
+                            </ProtectedRoute>
+                        }
+                    />
 
-                <Route
-                    path="/members"
-                    element={
-                        <ProtectedRoute>
-                            <AppLayout>
-                                <Members />
-                            </AppLayout>
-                        </ProtectedRoute>
-                    }
-                />
+                    <Route
+                        path="/reports"
+                        element={
+                            <ProtectedRoute>
+                                <AppLayout>
+                                    <Reports />
+                                </AppLayout>
+                            </ProtectedRoute>
+                        }
+                    />
 
-                <Route
-                    path="/403"
-                    element={
-                        <ProtectedRoute>
-                            <AppLayout>
-                                <Forbidden />
-                            </AppLayout>
-                        </ProtectedRoute>
-                    }
-                />
+                    <Route
+                        path="/members"
+                        element={
+                            <ProtectedRoute>
+                                <AppLayout>
+                                    <Members />
+                                </AppLayout>
+                            </ProtectedRoute>
+                        }
+                    />
 
-                <Route
-                    path="*"
-                    element={
-                        <ProtectedRoute>
-                            <AppLayout>
-                                <NotFound />
-                            </AppLayout>
-                        </ProtectedRoute>
-                    }
-                />
-            </Routes>
+                    <Route
+                        path="/403"
+                        element={
+                            <ProtectedRoute>
+                                <AppLayout>
+                                    <Forbidden />
+                                </AppLayout>
+                            </ProtectedRoute>
+                        }
+                    />
+
+                    <Route
+                        path="*"
+                        element={
+                            <ProtectedRoute>
+                                <AppLayout>
+                                    <NotFound />
+                                </AppLayout>
+                            </ProtectedRoute>
+                        }
+                    />
+                </Routes>
+            </Suspense>
         </BrowserRouter>
     );
 }
-
 
 export default App;
