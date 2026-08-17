@@ -1,17 +1,27 @@
 const mongoose = require("mongoose");
 
+let cachedPromise = null;
+
 async function connectDB() {
     if (mongoose.connection.readyState >= 1) {
-        return;
+        return mongoose.connection;
     }
 
-    try {
-        const mongoUri = process.env.MONGO_URI || "mongodb://127.0.0.1:27017/loop";
-        await mongoose.connect(mongoUri);
-        console.log("MongoDB connected successfully");
-    } catch (error) {
-        console.error("MongoDB connection failed:", error.message);
+    if (!cachedPromise) {
+        const mongoUri = process.env.MONGO_URI || "mongodb://127.0.0.1:27017/loop_db";
+        cachedPromise = mongoose.connect(mongoUri, {
+            serverSelectionTimeoutMS: 8000
+        }).then((m) => {
+            console.log("MongoDB connected successfully");
+            return m;
+        }).catch((err) => {
+            cachedPromise = null;
+            console.error("MongoDB connection failed:", err.message);
+            throw err;
+        });
     }
+
+    return cachedPromise;
 }
 
 module.exports = connectDB;
