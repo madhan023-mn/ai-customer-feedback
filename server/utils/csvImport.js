@@ -2,8 +2,8 @@ const fs = require("fs");
 const { parse } = require("csv-parse");
 
 function normalizeHeader(header) {
-    return (header || "")
-        .toString()
+    if (header === undefined || header === null) return "";
+    return String(header)
         .trim()
         .toLowerCase()
         .replace(/[^a-z0-9]/g, "");
@@ -11,10 +11,12 @@ function normalizeHeader(header) {
 
 function normalizeRow(row) {
     const normalized = {};
-    Object.keys(row || {}).forEach((key) => {
+    if (!row || typeof row !== "object") return normalized;
+
+    Object.keys(row).forEach((key) => {
         const normalizedKey = normalizeHeader(key);
         if (normalizedKey) {
-            normalized[normalizedKey] = row[key];
+            normalized[normalizedKey] = row[key] !== undefined && row[key] !== null ? String(row[key]) : "";
         }
     });
     return normalized;
@@ -30,7 +32,8 @@ function parseCSVFile(filePath) {
                     columns: true,
                     skip_empty_lines: true,
                     trim: true,
-                    bom: true
+                    bom: true,
+                    relax_column_count: true
                 })
             )
             .on("data", (row) => {

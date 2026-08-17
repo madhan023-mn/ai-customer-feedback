@@ -9,7 +9,8 @@ const ALLOWED_CHANNELS = [
     "SOCIAL",
     "COMMUNITY",
     "SALES_CALL",
-    "APP_STORE"
+    "APP_STORE",
+    "NPS_SURVEY"
 ];
 
 function validateHeaders(rows) {
@@ -20,13 +21,13 @@ function validateHeaders(rows) {
         };
     }
 
-    const firstRowKeys = Object.keys(rows[0]);
-    const missingHeaders = REQUIRED_COLUMNS.filter(col => !firstRowKeys.includes(col));
+    const firstRowKeys = Object.keys(rows[0] || {});
+    const hasContentHeader = firstRowKeys.some(k => ["content", "feedback", "text", "comment", "message"].includes(k));
 
-    if (missingHeaders.length > 0) {
+    if (!hasContentHeader) {
         return {
             valid: false,
-            error: `Missing required CSV headers: ${missingHeaders.join(", ")}`
+            error: "Missing required CSV 'content' header."
         };
     }
 
@@ -36,24 +37,19 @@ function validateHeaders(rows) {
 function validateRow(row, rowNumber) {
     const errors = [];
 
-    if (!row.content || !row.content.trim()) {
+    const getVal = (possibleKeys) => {
+        if (!row || typeof row !== "object") return "";
+        for (const k of possibleKeys) {
+            if (row[k] !== undefined && row[k] !== null && String(row[k]).trim() !== "") {
+                return String(row[k]).trim();
+            }
+        }
+        return "";
+    };
+
+    const content = getVal(["content", "feedback", "text", "comment", "message"]);
+    if (!content) {
         errors.push("content is required");
-    }
-
-    if (!row.channel || !row.channel.trim()) {
-        errors.push("channel is required");
-    } else {
-        const formattedChannel = row.channel.trim().toUpperCase();
-        if (!ALLOWED_CHANNELS.includes(formattedChannel)) {
-            errors.push(`Invalid channel: ${row.channel}`);
-        }
-    }
-
-    if (row.createdat) {
-        const date = new Date(row.createdat);
-        if (Number.isNaN(date.getTime())) {
-            errors.push("createdAt is invalid");
-        }
     }
 
     return {

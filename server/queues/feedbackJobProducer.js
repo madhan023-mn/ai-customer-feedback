@@ -3,10 +3,12 @@ const { processPendingFeedback } = require("../services/feedbackAiProcessor");
 
 async function queueFeedbackAnalysis(feedbackId) {
     try {
+        if (!feedbackId) return null;
+        const idStr = String(feedbackId);
         const job = await feedbackQueue.add(
             "analyze-feedback",
             {
-                feedbackId: feedbackId.toString()
+                feedbackId: idStr
             },
             {
                 attempts: 3,
@@ -20,7 +22,6 @@ async function queueFeedbackAnalysis(feedbackId) {
         );
         return job;
     } catch (err) {
-        // Fallback: execute processing synchronously if Redis is offline
         processPendingFeedback(5).catch(() => {});
         return null;
     }
@@ -28,25 +29,27 @@ async function queueFeedbackAnalysis(feedbackId) {
 
 async function queueFeedbackAnalysisBulk(feedbackIds) {
     try {
-        const jobs = feedbackIds.map(feedbackId => ({
-            name: "analyze-feedback",
-            data: {
-                feedbackId: feedbackId.toString()
-            },
-            opts: {
-                attempts: 3,
-                backoff: {
-                    type: "exponential",
-                    delay: 5000
+        if (!Array.isArray(feedbackIds) || feedbackIds.length === 0) return null;
+        const jobs = feedbackIds
+            .filter(id => id != null)
+            .map(feedbackId => ({
+                name: "analyze-feedback",
+                data: {
+                    feedbackId: String(feedbackId)
                 },
-                removeOnComplete: 100,
-                removeOnFail: 100
-            }
-        }));
+                opts: {
+                    attempts: 3,
+                    backoff: {
+                        type: "exponential",
+                        delay: 5000
+                    },
+                    removeOnComplete: 100,
+                    removeOnFail: 100
+                }
+            }));
 
         return await feedbackQueue.addBulk(jobs);
     } catch (err) {
-        // Fallback: execute bulk processing synchronously if Redis is offline
         processPendingFeedback(20).catch(() => {});
         return null;
     }
