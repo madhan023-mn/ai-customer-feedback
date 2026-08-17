@@ -16,7 +16,8 @@ import {
     X,
     Cpu,
     RotateCcw,
-    Layers
+    Layers,
+    Tag
 } from "lucide-react";
 
 function Feedback() {
@@ -361,8 +362,9 @@ function Feedback() {
                                                 {Array.isArray(item.themes) && item.themes.length > 0 && (
                                                     <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "2px" }}>
                                                         {item.themes.map((t, idx) => (
-                                                            <span key={idx} className="badge" style={{ backgroundColor: "rgba(109, 93, 252, 0.12)", color: "#6d5dfc", border: "1px solid rgba(109, 93, 252, 0.2)", fontSize: "0.75rem" }}>
-                                                                🏷️ {t}
+                                                            <span key={idx} className="badge" style={{ backgroundColor: "rgba(109, 93, 252, 0.12)", color: "#6d5dfc", border: "1px solid rgba(109, 93, 252, 0.2)", fontSize: "0.75rem", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                                                                <Tag size={11} />
+                                                                <span>{t}</span>
                                                             </span>
                                                         ))}
                                                     </div>
