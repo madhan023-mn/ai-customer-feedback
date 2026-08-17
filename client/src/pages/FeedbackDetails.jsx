@@ -233,39 +233,45 @@ function FeedbackDetails() {
 
                 {/* AI Rationale Block */}
                 <div className="detail-content" style={{ marginTop: "25px", background: "#faf5ff", padding: "20px", borderRadius: "10px", border: "1px solid #e9d5ff" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                        <h2 style={{ fontSize: "1rem", color: "#6b21a8", margin: 0, display: "flex", alignItems: "center", gap: "6px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                        <h2 style={{ fontSize: "1rem", color: "#6b21a8", margin: 0, display: "flex", alignItems: "center", gap: "6px", fontWeight: 700 }}>
                             <Cpu size={16} />
-                            <span>AI Analysis & Rationale</span>
+                            <span>AI Classification & Rationale</span>
                         </h2>
 
-                        {canEdit && feedback.aiStatus === "FAILED" && (
-                            <button
-                                className="btn-secondary"
-                                disabled={analyzing}
-                                onClick={retryAI}
-                                style={{ padding: "4px 10px", fontSize: "0.8rem", display: "inline-flex", alignItems: "center", gap: "4px", color: "#be123c", borderColor: "#fca5a5" }}
-                            >
-                                <RotateCcw size={12} />
-                                <span>{analyzing ? "Queuing..." : "Retry AI Analysis"}</span>
-                            </button>
-                        )}
-                        {canEdit && feedback.aiStatus !== "COMPLETED" && feedback.aiStatus !== "FAILED" && (
-                            <button
-                                className="btn-secondary"
-                                disabled={analyzing}
-                                onClick={triggerAnalysis}
-                                style={{ padding: "4px 10px", fontSize: "0.8rem", display: "inline-flex", alignItems: "center", gap: "4px" }}
-                            >
-                                <RotateCcw size={12} />
-                                <span>{analyzing ? "Analyzing..." : "Analyze with AI"}</span>
-                            </button>
-                        )}
+                        <span style={{ fontSize: "0.8rem", color: "#7e22ce", backgroundColor: "#f3e8ff", padding: "3px 10px", borderRadius: "12px", fontWeight: 600 }}>
+                            Analyzed by AI
+                        </span>
                     </div>
 
-                    <p style={{ fontSize: "0.95rem", lineHeight: 1.6, color: "#334155", margin: 0 }}>
-                        {feedback.rationale || "No AI rationale analysis available for this feedback."}
-                    </p>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px", marginBottom: "14px", fontSize: "0.9rem" }}>
+                        <div>
+                            <span style={{ color: "#6b21a8", fontWeight: 600 }}>Sentiment:</span>{" "}
+                            <strong>{feedback.sentiment === "POS" ? "Positive" : feedback.sentiment === "NEG" ? "Negative" : "Neutral"}</strong>
+                        </div>
+                        <div>
+                            <span style={{ color: "#6b21a8", fontWeight: 600 }}>Score:</span>{" "}
+                            <strong>{feedback.sentimentScore ?? 0}</strong>
+                        </div>
+                        <div>
+                            <span style={{ color: "#6b21a8", fontWeight: 600 }}>Feature Area:</span>{" "}
+                            <strong>{feedback.featureArea || "General"}</strong>
+                        </div>
+                        <div>
+                            <span style={{ color: "#6b21a8", fontWeight: 600 }}>Themes:</span>{" "}
+                            <strong>{Array.isArray(feedback.themes) && feedback.themes.length > 0 ? feedback.themes.join(", ") : (feedback.featureArea || "General")}</strong>
+                        </div>
+                    </div>
+
+                    <div style={{ paddingTop: "12px", borderTop: "1px solid #e9d5ff" }}>
+                        <span style={{ color: "#6b21a8", fontWeight: 600, display: "block", marginBottom: "4px", fontSize: "0.85rem" }}>
+                            Rationale:
+                        </span>
+                        <p style={{ fontSize: "0.95rem", lineHeight: 1.6, color: "#334155", margin: 0 }}>
+                            {feedback.rationale || "No AI rationale analysis available for this feedback."}
+                        </p>
+                    </div>
+
                     {feedback.aiError && (
                         <div style={{ marginTop: "10px", fontSize: "0.85rem", color: "#be123c", background: "#ffe4e6", padding: "8px 12px", borderRadius: "6px" }}>
                             <strong>Error Details:</strong> {feedback.aiError}
