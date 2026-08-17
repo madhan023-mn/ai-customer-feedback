@@ -1,4 +1,5 @@
 const fs = require("fs");
+const { Readable } = require("stream");
 const { parse } = require("csv-parse");
 
 function normalizeHeader(header) {
@@ -22,18 +23,28 @@ function normalizeRow(row) {
     return normalized;
 }
 
-function parseCSVFile(filePath) {
+function parseCSVFile(bufferOrPath) {
     return new Promise((resolve, reject) => {
         const rows = [];
+        let stream;
 
-        fs.createReadStream(filePath)
+        if (Buffer.isBuffer(bufferOrPath)) {
+            stream = Readable.from(bufferOrPath);
+        } else if (typeof bufferOrPath === "string") {
+            stream = fs.createReadStream(bufferOrPath);
+        } else {
+            return reject(new Error("Invalid CSV input data"));
+        }
+
+        stream
             .pipe(
                 parse({
                     columns: true,
                     skip_empty_lines: true,
                     trim: true,
                     bom: true,
-                    relax_column_count: true
+                    relax_column_count: true,
+                    relax_quotes: true
                 })
             )
             .on("data", (row) => {
@@ -42,12 +53,15 @@ function parseCSVFile(filePath) {
             .on("end", () => {
                 resolve(rows);
             })
-            .on("error", reject);
+            .on("error", (err) => {
+                reject(err);
+            });
     });
 }
 
 module.exports = {
     normalizeHeader,
     normalizeRow,
-    parseCSVFile
+    parseCSVFile,
+    parseCSVBuffer: parseCSVFile
 };

@@ -6,7 +6,7 @@ const { queueFeedbackAnalysisBulk } = require("../queues/feedbackJobProducer");
 const { processPendingFeedback } = require("../services/feedbackAiProcessor");
 
 async function importFeedbackCSV(req, res) {
-    let uploadedFile = null;
+    let tempPath = null;
 
     try {
         if (!req.file) {
@@ -15,9 +15,24 @@ async function importFeedbackCSV(req, res) {
             });
         }
 
-        uploadedFile = req.file.path;
+        const csvSource = req.file.buffer || req.file.path;
+        if (!csvSource) {
+            return res.status(400).json({
+                message: "No CSV content received in request"
+            });
+        }
 
-        const rows = await parseCSVFile(uploadedFile);
+        if (req.file.path) {
+            tempPath = req.file.path;
+        }
+
+        const rows = await parseCSVFile(csvSource);
+
+        if (!rows || rows.length === 0) {
+            return res.status(400).json({
+                message: "The uploaded CSV file is empty or could not be parsed."
+            });
+        }
 
         const headerValidation = validateHeaders(rows);
         if (!headerValidation.valid) {
@@ -121,7 +136,8 @@ async function importFeedbackCSV(req, res) {
         }
 
         res.status(201).json({
-            message: "CSV import completed successfully",
+            message: `Successfully imported ${insertedCount} feedback entries!`,
+            count: insertedCount,
             summary: {
                 totalRows: rows.length,
                 validRows: validRows.length,
@@ -136,10 +152,10 @@ async function importFeedbackCSV(req, res) {
             message: "CSV import failed: " + (error.message || "Unknown error")
         });
     } finally {
-        if (uploadedFile && fs.existsSync(uploadedFile)) {
-            fs.unlink(uploadedFile, (unlinkErr) => {
-                if (unlinkErr) console.warn("Failed to delete temp upload file:", unlinkErr);
-            });
+        if (tempPath && fs.existsSync(tempPath)) {
+            try {
+                fs.unlinkSync(tempPath);
+            } catch (e) {}
         }
     }
 }

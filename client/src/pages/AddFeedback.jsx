@@ -113,7 +113,8 @@ function AddFeedback() {
             setCsvFile(null);
             setTimeout(() => navigate("/feedback"), 1500);
         } catch (err) {
-            setError(err.response?.data?.message || "Failed to upload CSV");
+            console.error("CSV upload error details:", err);
+            setError(err.response?.data?.message || err.message || "Failed to upload CSV. Please verify the file format.");
         } finally {
             setLoading(false);
         }
