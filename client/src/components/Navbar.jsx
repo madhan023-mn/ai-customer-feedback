@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
+import { useTheme } from "../context/useTheme";
 import {
     MessageSquare,
     LayoutDashboard,
@@ -14,11 +15,14 @@ import {
     BarChart3,
     Menu,
     X,
-    HelpCircle
+    HelpCircle,
+    Sun,
+    Moon
 } from "lucide-react";
 
 function Navbar() {
     const { user, logout } = useAuth();
+    const { theme, toggleTheme } = useTheme();
     const location = useLocation();
     const navigate = useNavigate();
     const [mobileOpen, setMobileOpen] = useState(false);
@@ -80,13 +84,33 @@ function Navbar() {
                     <span className="brand-title">LOOP</span>
                 </Link>
 
-                <button
-                    className="mobile-toggle-btn"
-                    onClick={() => setMobileOpen(!mobileOpen)}
-                    aria-label="Toggle navigation sidebar"
-                >
-                    {mobileOpen ? <X size={22} /> : <Menu size={22} />}
-                </button>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <button
+                        onClick={toggleTheme}
+                        style={{
+                            background: "transparent",
+                            border: "1px solid var(--border-light)",
+                            color: "var(--text-main)",
+                            borderRadius: "6px",
+                            padding: "6px",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center"
+                        }}
+                        title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+                    >
+                        {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+                    </button>
+
+                    <button
+                        className="mobile-toggle-btn"
+                        onClick={() => setMobileOpen(!mobileOpen)}
+                        aria-label="Toggle navigation sidebar"
+                    >
+                        {mobileOpen ? <X size={22} /> : <Menu size={22} />}
+                    </button>
+                </div>
             </div>
 
             {/* Backdrop Overlay for Mobile Drawer */}
@@ -100,16 +124,35 @@ function Navbar() {
             {/* Vertical Sidebar */}
             <aside className={`app-sidebar ${mobileOpen ? "mobile-open" : ""}`}>
                 {/* Top Brand Header */}
-                <div className="sidebar-header">
+                <div className="sidebar-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <Link to="/dashboard" className="nav-brand">
                         <div className="brand-icon">
                             <MessageSquare size={20} color="white" />
                         </div>
                         <div>
                             <span className="brand-title">LOOP</span>
-                            <span className="brand-subtext">AI Intelligence</span>
+                            <span className="brand-subtext">Feedback Intelligence</span>
                         </div>
                     </Link>
+
+                    <button
+                        onClick={toggleTheme}
+                        style={{
+                            background: "transparent",
+                            border: "1px solid var(--border-light)",
+                            color: "var(--text-muted)",
+                            borderRadius: "6px",
+                            padding: "5px",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            transition: "all 0.2s"
+                        }}
+                        title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+                    >
+                        {theme === "dark" ? <Sun size={15} color="#fbbf24" /> : <Moon size={15} color="#6366f1" />}
+                    </button>
                 </div>
 
                 {/* Navigation Menu */}
@@ -161,4 +204,3 @@ function Navbar() {
 }
 
 export default Navbar;
-
