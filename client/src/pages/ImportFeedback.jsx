@@ -68,11 +68,28 @@ function ImportFeedback() {
             const formData = new FormData();
             formData.append("file", file);
 
-            const response = await api.post("/import/feedback", formData, {
-                headers: {
-                    "Content-Type": "multipart/form-data"
+            let response;
+            try {
+                response = await api.post("/import/feedback", formData, {
+                    headers: {
+                        "Content-Type": "multipart/form-data"
+                    }
+                });
+            } catch (p1Err) {
+                try {
+                    response = await api.post("/feedback/import", formData, {
+                        headers: {
+                            "Content-Type": "multipart/form-data"
+                        }
+                    });
+                } catch (p2Err) {
+                    response = await api.post("/feedback/upload", formData, {
+                        headers: {
+                            "Content-Type": "multipart/form-data"
+                        }
+                    });
                 }
-            });
+            }
 
             setResult(response.data);
             setFile(null);

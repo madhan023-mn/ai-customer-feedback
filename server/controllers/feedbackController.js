@@ -8,6 +8,7 @@ const {
     queueFeedbackAnalysisBulk
 } = require("../queues/feedbackJobProducer");
 const { processPendingFeedback } = require("../services/feedbackAiProcessor");
+const { importFeedbackCSV } = require("./importController");
 
 const aiResultSchema =
     require("../validators/aiValidator");
@@ -640,7 +641,8 @@ module.exports = {
     analyzeFeedback: analyzeSingleFeedback,
     analyzeSingleFeedback,
     retryAIAnalysis,
-    importCSV,
-    importFeedbackCsv: importCSV,
+    importCSV: importFeedbackCSV,
+    importFeedbackCsv: importFeedbackCSV,
+    importFeedbackCSV,
     simulateChannelIngestion
 };
