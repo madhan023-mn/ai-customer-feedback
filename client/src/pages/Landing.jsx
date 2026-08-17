@@ -5,16 +5,11 @@ import { useTheme } from "../context/useTheme";
 import {
     MessageSquare,
     Sparkles,
-    Search,
-    FileText,
-    UploadCloud,
     ArrowRight,
     CheckCircle2,
     LogIn,
     UserPlus,
-    Activity,
     Shield,
-    ExternalLink,
     Eye,
     Sun,
     Moon
@@ -97,18 +92,10 @@ function Landing() {
                 <nav style={{
                     display: "flex",
                     alignItems: "center",
-                    gap: "1.8rem",
+                    gap: "2rem",
                     fontSize: "0.9rem",
                     fontWeight: 600
                 }}>
-                    <a
-                        href="#features"
-                        style={{ color: colors.textMuted, textDecoration: "none", transition: "color 0.2s" }}
-                        onMouseOver={(e) => e.target.style.color = colors.textMain}
-                        onMouseOut={(e) => e.target.style.color = colors.textMuted}
-                    >
-                        Features
-                    </a>
                     <a
                         href="#how-it-works"
                         style={{ color: colors.textMuted, textDecoration: "none", transition: "color 0.2s" }}
@@ -221,14 +208,14 @@ function Landing() {
 
             {/* Hero Section */}
             <section style={{
-                padding: "4.5rem 1.5rem 2.5rem",
+                padding: "5rem 1.5rem 3.5rem",
                 textAlign: "center",
                 maxWidth: "960px",
                 margin: "0 auto",
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
-                gap: "1.4rem"
+                gap: "1.5rem"
             }}>
                 {/* Badge */}
                 <div style={{
@@ -249,7 +236,7 @@ function Landing() {
 
                 {/* Headline */}
                 <h1 style={{
-                    fontSize: "3.1rem",
+                    fontSize: "3.2rem",
                     fontWeight: 800,
                     lineHeight: 1.2,
                     letterSpacing: "-0.5px",
@@ -261,7 +248,7 @@ function Landing() {
 
                 {/* Subtitle */}
                 <p style={{
-                    fontSize: "1.12rem",
+                    fontSize: "1.15rem",
                     color: colors.textMuted,
                     maxWidth: "760px",
                     lineHeight: 1.65,
@@ -282,7 +269,7 @@ function Landing() {
                     <Link
                         to="/register"
                         style={{
-                            padding: "11px 26px",
+                            padding: "12px 28px",
                             fontSize: "0.95rem",
                             fontWeight: 600,
                             display: "inline-flex",
@@ -304,7 +291,7 @@ function Landing() {
                     <Link
                         to="/login"
                         style={{
-                            padding: "11px 22px",
+                            padding: "12px 24px",
                             fontSize: "0.95rem",
                             fontWeight: 600,
                             borderRadius: "8px",
@@ -328,7 +315,7 @@ function Landing() {
                     display: "flex",
                     alignItems: "center",
                     gap: "24px",
-                    marginTop: "1rem",
+                    marginTop: "1.2rem",
                     fontSize: "0.85rem",
                     color: colors.textMuted,
                     flexWrap: "wrap",
@@ -346,137 +333,17 @@ function Landing() {
                 </div>
             </section>
 
-            {/* Product Dashboard Preview (Clean Realistic SaaS UI Mockup) */}
-            <section style={{
+            {/* How It Works Section */}
+            <section id="how-it-works" style={{
                 maxWidth: "1020px",
                 margin: "1rem auto 4.5rem",
                 width: "92%"
             }}>
-                <div style={{
-                    backgroundColor: colors.cardBg,
-                    borderRadius: "12px",
-                    border: `1px solid ${colors.border}`,
-                    boxShadow: isDark ? "0 20px 40px rgba(0, 0, 0, 0.4)" : "0 10px 30px rgba(0, 0, 0, 0.06)",
-                    overflow: "hidden"
-                }}>
-                    {/* Mockup Header Bar */}
-                    <div style={{
-                        padding: "10px 16px",
-                        backgroundColor: colors.innerBg,
-                        borderBottom: `1px solid ${colors.border}`,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between"
-                    }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                            <div style={{ width: "10px", height: "10px", borderRadius: "50%", backgroundColor: "#ef4444" }}></div>
-                            <div style={{ width: "10px", height: "10px", borderRadius: "50%", backgroundColor: "#f59e0b" }}></div>
-                            <div style={{ width: "10px", height: "10px", borderRadius: "50%", backgroundColor: "#10b981" }}></div>
-                            <span style={{ marginLeft: "10px", fontSize: "0.8rem", color: colors.textMuted, fontWeight: 500 }}>
-                                app.loop.io/dashboard — Acme SaaS Corp
-                            </span>
-                        </div>
-                        <span style={{ fontSize: "0.75rem", color: "#10b981", fontWeight: 600, display: "flex", alignItems: "center", gap: "4px" }}>
-                            <Activity size={12} /> Live Ingestion Active
-                        </span>
-                    </div>
-
-                    {/* Mockup Content */}
-                    <div style={{ padding: "1.5rem" }}>
-                        {/* Top KPI Metrics Row */}
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem", marginBottom: "1.2rem" }}>
-                            <div style={{ padding: "1rem", borderRadius: "8px", backgroundColor: colors.innerBg, border: `1px solid ${colors.border}` }}>
-                                <div style={{ fontSize: "0.78rem", color: colors.textMuted, fontWeight: 600 }}>TOTAL FEEDBACK</div>
-                                <div style={{ fontSize: "1.6rem", fontWeight: 800, color: colors.textMain, marginTop: "4px" }}>125</div>
-                                <div style={{ fontSize: "0.75rem", color: "#3b82f6", marginTop: "2px" }}>Across 5 channels</div>
-                            </div>
-                            <div style={{ padding: "1rem", borderRadius: "8px", backgroundColor: colors.innerBg, border: `1px solid ${colors.border}` }}>
-                                <div style={{ fontSize: "0.78rem", color: colors.textMuted, fontWeight: 600 }}>POSITIVE SENTIMENT</div>
-                                <div style={{ fontSize: "1.6rem", fontWeight: 800, color: "#10b981", marginTop: "4px" }}>58.4%</div>
-                                <div style={{ fontSize: "0.75rem", color: colors.textMuted, marginTop: "2px" }}>73 positive entries</div>
-                            </div>
-                            <div style={{ padding: "1rem", borderRadius: "8px", backgroundColor: colors.innerBg, border: `1px solid ${colors.border}` }}>
-                                <div style={{ fontSize: "0.78rem", color: colors.textMuted, fontWeight: 600 }}>NEGATIVE SENTIMENT</div>
-                                <div style={{ fontSize: "1.6rem", fontWeight: 800, color: "#ef4444", marginTop: "4px" }}>24.0%</div>
-                                <div style={{ fontSize: "0.75rem", color: colors.textMuted, marginTop: "2px" }}>30 complaints tracked</div>
-                            </div>
-                            <div style={{ padding: "1rem", borderRadius: "8px", backgroundColor: colors.innerBg, border: `1px solid ${colors.border}` }}>
-                                <div style={{ fontSize: "0.78rem", color: colors.textMuted, fontWeight: 600 }}>AI CLUSTERS</div>
-                                <div style={{ fontSize: "1.6rem", fontWeight: 800, color: "#8b5cf6", marginTop: "4px" }}>6 Themes</div>
-                                <div style={{ fontSize: "0.75rem", color: colors.textMuted, marginTop: "2px" }}>Confidence &gt; 0.85</div>
-                            </div>
-                        </div>
-
-                        {/* Split: Themes & Recent Classification */}
-                        <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "1.2rem" }}>
-                            {/* Top Customer Themes List */}
-                            <div style={{ padding: "1.2rem", borderRadius: "8px", backgroundColor: colors.innerBg, border: `1px solid ${colors.border}` }}>
-                                <div style={{ fontSize: "0.85rem", fontWeight: 700, color: colors.textMain, marginBottom: "0.8rem", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                                    <span>Top Customer Themes</span>
-                                    <span style={{ fontSize: "0.75rem", color: colors.textMuted }}>By Volume</span>
-                                </div>
-                                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "0.82rem", padding: "6px 10px", borderRadius: "6px", backgroundColor: colors.cardBg, border: `1px solid ${colors.border}` }}>
-                                        <span style={{ color: colors.textMain, fontWeight: 500 }}>1. Payment Failures & Checkout</span>
-                                        <span style={{ color: "#ef4444", fontWeight: 700 }}>34 items</span>
-                                    </div>
-                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "0.82rem", padding: "6px 10px", borderRadius: "6px", backgroundColor: colors.cardBg, border: `1px solid ${colors.border}` }}>
-                                        <span style={{ color: colors.textMain, fontWeight: 500 }}>2. Mobile App Performance</span>
-                                        <span style={{ color: "#f59e0b", fontWeight: 700 }}>28 items</span>
-                                    </div>
-                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "0.82rem", padding: "6px 10px", borderRadius: "6px", backgroundColor: colors.cardBg, border: `1px solid ${colors.border}` }}>
-                                        <span style={{ color: colors.textMain, fontWeight: 500 }}>3. Authentication & SSO Setup</span>
-                                        <span style={{ color: "#3b82f6", fontWeight: 700 }}>19 items</span>
-                                    </div>
-                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "0.82rem", padding: "6px 10px", borderRadius: "6px", backgroundColor: colors.cardBg, border: `1px solid ${colors.border}` }}>
-                                        <span style={{ color: colors.textMain, fontWeight: 500 }}>4. Analytics & CSV Export</span>
-                                        <span style={{ color: "#10b981", fontWeight: 700 }}>16 items</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Live AI Classification Example */}
-                            <div style={{ padding: "1.2rem", borderRadius: "8px", backgroundColor: colors.innerBg, border: `1px solid ${colors.border}`, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-                                <div>
-                                    <div style={{ fontSize: "0.85rem", fontWeight: 700, color: colors.textMain, marginBottom: "0.6rem", display: "flex", alignItems: "center", gap: "6px" }}>
-                                        <Sparkles size={14} color="#8b5cf6" />
-                                        <span>AI Classification & Rationale</span>
-                                    </div>
-                                    <p style={{ fontSize: "0.8rem", color: colors.textMain, fontStyle: "italic", lineHeight: 1.5, padding: "8px", borderRadius: "6px", backgroundColor: colors.cardBg, border: `1px solid ${colors.border}` }}>
-                                        "MasterCard payment failed twice during checkout on the Pro annual plan."
-                                    </p>
-                                    <div style={{ marginTop: "10px", display: "flex", gap: "6px", flexWrap: "wrap" }}>
-                                        <span style={{ fontSize: "0.72rem", padding: "2px 7px", borderRadius: "4px", backgroundColor: "rgba(239, 68, 68, 0.15)", color: "#ef4444", fontWeight: 600 }}>
-                                            Negative (-0.84)
-                                        </span>
-                                        <span style={{ fontSize: "0.72rem", padding: "2px 7px", borderRadius: "4px", backgroundColor: "rgba(59, 130, 246, 0.15)", color: "#3b82f6", fontWeight: 600 }}>
-                                            Theme: Payment Failure
-                                        </span>
-                                        <span style={{ fontSize: "0.72rem", padding: "2px 7px", borderRadius: "4px", backgroundColor: "rgba(139, 92, 246, 0.15)", color: "#8b5cf6", fontWeight: 600 }}>
-                                            Area: Billing
-                                        </span>
-                                    </div>
-                                </div>
-                                <div style={{ fontSize: "0.75rem", color: colors.textMuted, marginTop: "10px", borderTop: `1px solid ${colors.border}`, paddingTop: "8px" }}>
-                                    <strong>Rationale:</strong> Customer blocked by checkout gateway timeout. High priority.
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* How It Works Section */}
-            <section id="how-it-works" style={{
-                maxWidth: "1020px",
-                margin: "0 auto 4.5rem",
-                width: "92%"
-            }}>
                 <div style={{ textAlign: "center", marginBottom: "2.5rem" }}>
-                    <h2 style={{ fontSize: "1.9rem", fontWeight: 800, color: colors.textMain }}>
+                    <h2 style={{ fontSize: "2rem", fontWeight: 800, color: colors.textMain }}>
                         How It Works
                     </h2>
-                    <p style={{ color: colors.textMuted, marginTop: "6px", fontSize: "0.95rem" }}>
+                    <p style={{ color: colors.textMuted, marginTop: "6px", fontSize: "1rem" }}>
                         Collect → Analyze → Explore → Act
                     </p>
                 </div>
@@ -486,50 +353,50 @@ function Landing() {
                     gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
                     gap: "1.2rem"
                 }}>
-                    <div style={{ padding: "1.5rem", borderRadius: "10px", backgroundColor: colors.cardBg, border: `1px solid ${colors.border}` }}>
+                    <div style={{ padding: "1.6rem", borderRadius: "10px", backgroundColor: colors.cardBg, border: `1px solid ${colors.border}` }}>
                         <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#3b82f6", textTransform: "uppercase", letterSpacing: "0.5px" }}>
                             01 — Collect
                         </div>
-                        <h4 style={{ fontSize: "1.05rem", fontWeight: 700, marginTop: "0.6rem", color: colors.textMain }}>
+                        <h4 style={{ fontSize: "1.1rem", fontWeight: 700, marginTop: "0.6rem", color: colors.textMain }}>
                             Multi-Channel Intake
                         </h4>
-                        <p style={{ fontSize: "0.84rem", color: colors.textMuted, marginTop: "6px", lineHeight: 1.55 }}>
+                        <p style={{ fontSize: "0.86rem", color: colors.textMuted, marginTop: "6px", lineHeight: 1.55 }}>
                             Upload customer feedback from surveys, support tickets, app reviews, email, and social channels.
                         </p>
                     </div>
 
-                    <div style={{ padding: "1.5rem", borderRadius: "10px", backgroundColor: colors.cardBg, border: `1px solid ${colors.border}` }}>
+                    <div style={{ padding: "1.6rem", borderRadius: "10px", backgroundColor: colors.cardBg, border: `1px solid ${colors.border}` }}>
                         <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#8b5cf6", textTransform: "uppercase", letterSpacing: "0.5px" }}>
                             02 — Analyze
                         </div>
-                        <h4 style={{ fontSize: "1.05rem", fontWeight: 700, marginTop: "0.6rem", color: colors.textMain }}>
+                        <h4 style={{ fontSize: "1.1rem", fontWeight: 700, marginTop: "0.6rem", color: colors.textMain }}>
                             Sentiment & Themes
                         </h4>
-                        <p style={{ fontSize: "0.84rem", color: colors.textMuted, marginTop: "6px", lineHeight: 1.55 }}>
+                        <p style={{ fontSize: "0.86rem", color: colors.textMuted, marginTop: "6px", lineHeight: 1.55 }}>
                             Detect sentiment, classify feedback, identify recurring themes, and measure confidence scores.
                         </p>
                     </div>
 
-                    <div style={{ padding: "1.5rem", borderRadius: "10px", backgroundColor: colors.cardBg, border: `1px solid ${colors.border}` }}>
+                    <div style={{ padding: "1.6rem", borderRadius: "10px", backgroundColor: colors.cardBg, border: `1px solid ${colors.border}` }}>
                         <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#10b981", textTransform: "uppercase", letterSpacing: "0.5px" }}>
                             03 — Explore
                         </div>
-                        <h4 style={{ fontSize: "1.05rem", fontWeight: 700, marginTop: "0.6rem", color: colors.textMain }}>
+                        <h4 style={{ fontSize: "1.1rem", fontWeight: 700, marginTop: "0.6rem", color: colors.textMain }}>
                             Natural Language Search
                         </h4>
-                        <p style={{ fontSize: "0.84rem", color: colors.textMuted, marginTop: "6px", lineHeight: 1.55 }}>
+                        <p style={{ fontSize: "0.86rem", color: colors.textMuted, marginTop: "6px", lineHeight: 1.55 }}>
                             Search customer feedback using natural language and find the conversations behind each insight.
                         </p>
                     </div>
 
-                    <div style={{ padding: "1.5rem", borderRadius: "10px", backgroundColor: colors.cardBg, border: `1px solid ${colors.border}` }}>
+                    <div style={{ padding: "1.6rem", borderRadius: "10px", backgroundColor: colors.cardBg, border: `1px solid ${colors.border}` }}>
                         <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#f59e0b", textTransform: "uppercase", letterSpacing: "0.5px" }}>
                             04 — Act
                         </div>
-                        <h4 style={{ fontSize: "1.05rem", fontWeight: 700, marginTop: "0.6rem", color: colors.textMain }}>
+                        <h4 style={{ fontSize: "1.1rem", fontWeight: 700, marginTop: "0.6rem", color: colors.textMain }}>
                             Executive Reports
                         </h4>
-                        <p style={{ fontSize: "0.84rem", color: colors.textMuted, marginTop: "6px", lineHeight: 1.55 }}>
+                        <p style={{ fontSize: "0.86rem", color: colors.textMuted, marginTop: "6px", lineHeight: 1.55 }}>
                             Generate reports with key trends, recurring issues, volume shifts, and recommended actions.
                         </p>
                     </div>
@@ -629,11 +496,11 @@ function Landing() {
             {/* Final CTA Section */}
             <section style={{
                 textAlign: "center",
-                padding: "2rem 1.5rem 4rem",
+                padding: "2rem 1.5rem 4.5rem",
                 maxWidth: "700px",
                 margin: "0 auto"
             }}>
-                <h2 style={{ fontSize: "1.8rem", fontWeight: 800, color: colors.textMain }}>
+                <h2 style={{ fontSize: "1.9rem", fontWeight: 800, color: colors.textMain }}>
                     Turn customer feedback into actionable insights.
                 </h2>
                 <p style={{ fontSize: "0.95rem", color: colors.textMuted, marginTop: "6px" }}>
@@ -675,16 +542,6 @@ function Landing() {
                     <Link to="/login" style={{ color: colors.textMain, textDecoration: "none", fontWeight: 600 }}>Sign In</Link>
                     <span style={{ color: colors.border }}>•</span>
                     <Link to="/register" style={{ color: colors.textMain, textDecoration: "none", fontWeight: 600 }}>Get Started</Link>
-                    <span style={{ color: colors.border }}>•</span>
-                    <a
-                        href="https://github.com/madhan023-mn/ai-customer-feedback"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ color: colors.textMain, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "4px", fontWeight: 600 }}
-                    >
-                        <span>GitHub</span>
-                        <ExternalLink size={13} />
-                    </a>
                 </div>
 
                 <div style={{ fontWeight: 700, color: colors.textMain, fontSize: "0.9rem", marginBottom: "4px" }}>
