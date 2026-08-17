@@ -38,7 +38,8 @@ function Register() {
             );
             navigate("/dashboard");
         } catch (err) {
-            setError(err.response?.data?.message || "Registration failed");
+            console.error("Registration error details:", err);
+            setError(err.response?.data?.message || err.message || "Registration failed. Please try again.");
         } finally {
             setLoading(false);
         }

@@ -21,7 +21,8 @@ function Login() {
             await login(email, password);
             navigate("/dashboard");
         } catch (err) {
-            setError(err.response?.data?.message || "Invalid email or password");
+            console.error("Login error details:", err);
+            setError(err.response?.data?.message || err.message || "Invalid email or password. Please try again.");
         } finally {
             setLoading(false);
         }
