@@ -8,7 +8,8 @@ import {
     Frown,
     AlertTriangle,
     Loader2,
-    ArrowUpRight
+    ArrowUpRight,
+    Flame
 } from "lucide-react";
 
 function Themes() {
@@ -85,8 +86,9 @@ function Themes() {
                 }}>
                     <AlertTriangle size={22} color="#dc2626" style={{ flexShrink: 0 }} />
                     <div style={{ flex: 1 }}>
-                        <strong style={{ color: "#dc2626", fontSize: "0.95rem", display: "block" }}>
-                            🔥 Spiking AI Themes Alert ({spikingThemes.length} themes expanding rapidly)
+                        <strong style={{ color: "#dc2626", fontSize: "0.95rem", display: "flex", alignItems: "center", gap: "6px" }}>
+                            <Flame size={16} />
+                            <span>Spiking Themes Alert ({spikingThemes.length} themes expanding rapidly)</span>
                         </strong>
                         <span style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>
                             High negative sentiment or feedback volume spikes detected in: {spikingThemes.map(t => `${t._id || t.name} (+${t.spikePercentage || 50}%)`).join(", ")}.
@@ -129,9 +131,13 @@ function Themes() {
                                                     fontSize: "0.75rem",
                                                     fontWeight: 800,
                                                     padding: "2px 8px",
-                                                    borderRadius: "12px"
+                                                    borderRadius: "12px",
+                                                    display: "inline-flex",
+                                                    alignItems: "center",
+                                                    gap: "4px"
                                                 }}>
-                                                    🔥 +{theme.spikePercentage || 50}%
+                                                    <Flame size={12} />
+                                                    <span>+{theme.spikePercentage || 50}%</span>
                                                 </span>
                                             )}
                                         </div>
