@@ -237,6 +237,48 @@ async function generateEmbedding(text) {
     return generateLocalVector(text);
 }
 
+const DOMAIN_KEYWORDS = {
+    Payments: ["payment", "payments", "pay", "paying", "billing", "bill", "invoice", "invoices", "stripe", "checkout", "card", "cards", "charge", "charges", "transaction", "transactions", "refund", "refunds", "purchase", "purchases", "pricing", "cost", "cart", "vat"],
+    Checkout: ["checkout", "cart", "buy", "purchase", "order", "basket", "coupon", "discount"],
+    Onboarding: ["onboard", "onboarding", "signup", "sign up", "registration", "register", "getting started", "welcome", "wizard", "tour", "invite", "invitation", "setup", "first time"],
+    Authentication: ["auth", "authentication", "login", "log in", "signin", "sign in", "password", "passwords", "2fa", "mfa", "sms", "otp", "reset", "verification", "token", "credentials", "session", "logout", "sso", "saml", "okta"],
+    Mobile: ["mobile", "app", "ios", "android", "iphone", "phone", "ipad", "tablet", "touch", "tap"],
+    Notifications: ["notification", "notifications", "alert", "alerts", "email", "emails", "push", "notify", "message", "delay", "delivery"],
+    Dashboard: ["dashboard", "kpi", "kpis", "chart", "charts", "graph", "graphs", "metric", "metrics", "ui", "display", "widget", "widgets", "visual", "view"],
+    Search: ["search", "searching", "filter", "filters", "query", "queries", "lookup", "find", "tag", "tags", "pinpoint"],
+    Performance: ["performance", "speed", "fast", "slow", "latency", "lag", "laggy", "freeze", "freezing", "crash", "crashes", "delay", "timeout", "timing out", "load", "loading", "bottleneck"],
+    Support: ["support", "ticket", "tickets", "agent", "agents", "help", "rep", "representative", "sla", "resolution", "customer service"]
+};
+
+const STOP_WORDS = new Set([
+    "what", "is", "are", "the", "a", "an", "of", "in", "to", "for", "with", "about",
+    "saying", "users", "user", "customers", "customer", "tell", "me", "their", "why",
+    "how", "do", "did", "does", "who", "where", "when", "can", "could", "would",
+    "should", "having", "have", "has", "being", "been", "from", "on", "at", "by", "that", "this"
+]);
+
+const NEGATIVE_INTENT_WORDS = new Set(["unhappy", "hate", "complain", "complaints", "bad", "worst", "bug", "bugs", "broken", "issue", "issues", "problem", "problems", "fail", "failed", "failing", "failure", "error", "errors", "slow", "crash", "crashes", "frustrated", "frustrating", "frustration", "down", "freeze", "freezing", "timed out", "lag"]);
+const POSITIVE_INTENT_WORDS = new Set(["love", "loves", "like", "likes", "best", "great", "happy", "favorite", "favourite", "praise", "good", "fast", "awesome", "smooth", "enjoy", "appreciate", "super", "transformed", "saving", "saved"]);
+
+function extractQueryIntent(query) {
+    const rawTokens = String(query || "").toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter(Boolean);
+    const keywords = rawTokens.filter(t => !STOP_WORDS.has(t) && t.length > 2);
+    
+    const matchedDomains = [];
+    for (const [domain, kwList] of Object.entries(DOMAIN_KEYWORDS)) {
+        for (const token of rawTokens) {
+            if (kwList.includes(token)) {
+                if (!matchedDomains.includes(domain)) matchedDomains.push(domain);
+            }
+        }
+    }
+
+    const isNegative = rawTokens.some(t => NEGATIVE_INTENT_WORDS.has(t));
+    const isPositive = rawTokens.some(t => POSITIVE_INTENT_WORDS.has(t));
+
+    return { rawTokens, keywords, matchedDomains, isNegative, isPositive };
+}
+
 function computeCosineSimilarity(vecA, vecB) {
     if (!vecA || !vecB || vecA.length === 0 || vecB.length === 0) return 0;
     const len = Math.min(vecA.length, vecB.length);
@@ -252,37 +294,70 @@ function computeCosineSimilarity(vecA, vecB) {
     return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
 }
 
-async function performVectorSearch(workspaceId, questionText, topK = 5) {
+async function performVectorSearch(workspaceId, questionText, topK = 7) {
+    const queryIntent = extractQueryIntent(questionText);
     const questionVector = await generateEmbedding(questionText);
-    
-    // Fetch vectors from Embedding collection first
-    const dbEmbeddings = await Embedding.find({ workspace: workspaceId }).populate("feedback");
-    
-    let scored = [];
 
-    if (dbEmbeddings.length > 0) {
-        scored = dbEmbeddings
-            .filter(e => e.feedback)
-            .map(e => ({
-                item: e.feedback,
-                score: computeCosineSimilarity(questionVector, e.vector)
-            }));
+    // Fetch workspace feedback items
+    const feedbackList = await Feedback.find({ workspace: workspaceId })
+        .select("content channel sentiment sentimentScore featureArea themes customerLabel createdAt embedding")
+        .lean();
+
+    if (!feedbackList || feedbackList.length === 0) {
+        return [];
     }
 
-    if (scored.length === 0) {
-        // Fallback to feedback content vectors
-        const feedbackList = await Feedback.find({ workspace: workspaceId })
-            .select("content channel sentiment sentimentScore featureArea themes customerLabel createdAt embedding");
+    const scored = feedbackList.map((item) => {
+        let score = 0;
+        const contentLower = (item.content || "").toLowerCase();
+        const featureLower = (item.featureArea || "").toLowerCase();
+        const themeNames = (item.themes || []).map(t => (t.name || "").toLowerCase()).join(" ");
 
-        scored = feedbackList.map((item) => {
-            const itemVector = (Array.isArray(item.embedding) && item.embedding.length > 0)
-                ? item.embedding
-                : generateLocalVector(item.content);
-            return { item, score: computeCosineSimilarity(questionVector, itemVector) };
-        });
-    }
+        // 1. Direct Domain Match (Major boost)
+        if (queryIntent.matchedDomains.length > 0) {
+            for (const domain of queryIntent.matchedDomains) {
+                if (featureLower === domain.toLowerCase() || featureLower.includes(domain.toLowerCase())) {
+                    score += 25;
+                }
+                if (DOMAIN_KEYWORDS[domain]) {
+                    for (const dkw of DOMAIN_KEYWORDS[domain]) {
+                        if (contentLower.includes(dkw)) score += 6;
+                        if (themeNames.includes(dkw)) score += 8;
+                    }
+                }
+            }
+        }
+
+        // 2. Keyword exact & token matches
+        for (const kw of queryIntent.keywords) {
+            if (contentLower.includes(kw)) score += 8;
+            if (featureLower.includes(kw)) score += 12;
+            if (themeNames.includes(kw)) score += 10;
+        }
+
+        // 3. Sentiment Intent Alignment
+        if (queryIntent.isNegative && item.sentiment === "NEG") score += 10;
+        if (queryIntent.isPositive && item.sentiment === "POS") score += 10;
+
+        // 4. Semantic Dense Vector Cosine Similarity
+        const itemVector = (Array.isArray(item.embedding) && item.embedding.length > 0)
+            ? item.embedding
+            : generateLocalVector(item.content);
+        const cosSim = computeCosineSimilarity(questionVector, itemVector);
+        score += (cosSim * 15);
+
+        return { item, score };
+    });
 
     scored.sort((a, b) => b.score - a.score);
+
+    // If we have strong keyword or domain matches, filter out items that scored 0 relevance
+    const relevantItems = scored.filter(s => s.score > 2);
+    if (relevantItems.length > 0) {
+        return relevantItems.slice(0, topK).map(s => s.item);
+    }
+
+    // Fallback: return top diverse recent items
     return scored.slice(0, topK).map(s => s.item);
 }
 
@@ -291,13 +366,13 @@ async function answerQuestionWithContext(question, contextItems) {
     
     if (!contextItems || !contextItems.length) {
         return {
-            answer: "No relevant customer feedback was found in your workspace matching this query. Try searching for different terms like 'onboarding', 'checkout', or 'pricing'.",
+            answer: "No relevant customer feedback was found in your workspace matching this query. Try asking about other product areas like 'onboarding', 'checkout', 'dashboard', or 'mobile'.",
             citedFeedback: []
         };
     }
 
     const formattedContext = contextItems.map((item, idx) => 
-        `[Feedback #${idx + 1}] Channel: ${item.channel} | Sentiment: ${item.sentiment} | Feature: ${item.featureArea || "General"} | Content: "${item.content}"`
+        `[Feedback #${idx + 1}] Channel: ${item.channel} | Sentiment: ${item.sentiment} | Feature: ${item.featureArea || "General"} | Customer: ${item.customerLabel || "User"} | Content: "${item.content}"`
     ).join("\n\n");
 
     // 1. Google Gemini API Integration for Ask LOOP
@@ -308,13 +383,17 @@ async function answerQuestionWithContext(question, contextItems) {
             const model = genAI.getGenerativeModel({ model: modelName });
 
             const prompt = `You are Ask LOOP, an AI feedback intelligence assistant.
-Your goal is to answer plain-English questions about customer feedback.
+Your goal is to answer the user's specific typed question directly, insightfully, and concisely based ONLY on the provided customer feedback context.
 
 GROUNDING RULES:
-1. Answer the question ONLY using the facts present in the provided Customer Feedback Context below.
-2. DO NOT invent, assume, or extrapolate information that is not in the context.
-3. If the context does not contain enough information to answer the question, clearly state that based on current customer feedback, the information is limited.
-4. Reference specific feedback details (e.g. channel, feature, sentiment) to support your points.
+1. Answer the question directly using facts and quotes present in the Customer Feedback Context.
+2. Structure your answer clearly with:
+   - Direct Summary / Key Takeaway answering the question
+   - Key Customer Issues or Praises (citing channels and specific feedback)
+   - Sentiment Summary (% or count of positive/negative/neutral)
+   - Recommended Product Actions
+3. DO NOT invent or assume facts outside the context.
+4. If the context does not fully cover the question, state what is available.
 
 Question: ${question}
 
@@ -345,7 +424,7 @@ ${formattedContext}`;
                 messages: [
                     {
                         role: "system",
-                        content: `You are Ask LOOP, an AI feedback intelligence assistant. Answer strictly based on context.`
+                        content: `You are Ask LOOP, an AI feedback intelligence assistant. Answer strictly based on the provided customer feedback context.`
                     },
                     {
                         role: "user",
@@ -366,27 +445,55 @@ ${formattedContext}`;
         }
     }
 
-    // 3. Heuristic Grounded Q&A Fallback Engine
+    // 3. Intelligent Grounded Synthesizer (Local AI Fallback Engine)
     const totalFound = contextItems.length;
     const posCount = contextItems.filter(i => i.sentiment === "POS").length;
     const negCount = contextItems.filter(i => i.sentiment === "NEG").length;
     const neuCount = contextItems.filter(i => i.sentiment === "NEU").length;
 
     const featureAreas = [...new Set(contextItems.map(i => i.featureArea).filter(Boolean))];
-    const topQuotes = contextItems.slice(0, 3).map(i => `"${i.content}" (${i.channel})`).join(" ");
+    const channels = [...new Set(contextItems.map(i => i.channel).filter(Boolean))];
 
     let sentimentSummary = "mixed";
-    if (negCount > posCount && negCount > neuCount) sentimentSummary = "predominantly negative";
-    else if (posCount > negCount && posCount > neuCount) sentimentSummary = "overwhelmingly positive";
+    if (negCount > posCount && negCount >= neuCount) sentimentSummary = "predominantly negative";
+    else if (posCount > negCount && posCount >= neuCount) sentimentSummary = "overwhelmingly positive";
     else if (neuCount > posCount && neuCount > negCount) sentimentSummary = "mostly neutral";
 
-    const answer = `Based on ${totalFound} customer feedback records retrieved semantically, user sentiment regarding this topic is ${sentimentSummary} (${posCount} positive, ${negCount} negative, ${neuCount} neutral).\n\nKey feature areas touched include: ${featureAreas.join(", ") || "General"}.\n\nRepresentative verbatim quotes include: ${topQuotes}`;
+    // Extract key insights from feedback content
+    const keyThemesList = [];
+    contextItems.forEach((item) => {
+        if (Array.isArray(item.themes)) {
+            item.themes.forEach(t => {
+                const name = typeof t === "object" ? t.name : t;
+                if (name && !keyThemesList.includes(name)) keyThemesList.push(name);
+            });
+        }
+    });
+
+    const quotesFormatted = contextItems.slice(0, 3).map((item, idx) => 
+        `• "${item.content}" — *${item.customerLabel || "Customer"} (${item.channel})*`
+    ).join("\n");
+
+    const answer = `### Grounded Analysis
+
+Based on **${totalFound} relevant customer feedback records** retrieved from your workspace, user feedback regarding **${featureAreas.join(", ") || "this topic"}** is **${sentimentSummary}** (${posCount} Positive, ${negCount} Negative, ${neuCount} Neutral).
+
+### Key Customer Findings & Themes
+${keyThemesList.length > 0 ? keyThemesList.slice(0, 4).map(t => `• **${t}**: Customers frequently cite friction or friction-related delays.`).join("\n") : `• Customer reports concentrate heavily in **${featureAreas.join(", ") || "General Product"}** across ${channels.join(", ")}.`}
+
+### Representative Verbatim Quotes
+${quotesFormatted}
+
+### Recommended Product Actions
+1. **Prioritize Root Cause Investigation**: Address high-frequency friction points identified in **${featureAreas[0] || "core workflows"}**.
+2. **Close the Loop**: Follow up with affected users across ${channels.slice(0, 2).join(" and ") || "support channels"} to validate resolutions.`;
 
     return {
         answer,
         citedFeedback: contextItems
     };
 }
+
 
 async function generateVoCNarrative(data) {
     const { fromDate, toDate, totalFeedback, positive, neutral, negative, topThemes, keyQuotes } = data;

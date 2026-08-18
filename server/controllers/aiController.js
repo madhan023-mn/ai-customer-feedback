@@ -126,19 +126,12 @@ async function askLoop(req, res) {
 
         let contextItems = vectorMatches || [];
 
-        // Fallback to top recent feedback if vector match is empty
-        if (contextItems.length < 3) {
-            const fallbackItems = await Feedback.find({ workspace })
+        // Fallback to top recent feedback only if no relevant matches found
+        if (contextItems.length === 0) {
+            contextItems = await Feedback.find({ workspace })
                 .sort({ createdAt: -1 })
                 .limit(7)
                 .lean();
-
-            const existingIds = new Set(contextItems.map(i => String(i._id)));
-            for (const item of fallbackItems) {
-                if (!existingIds.has(String(item._id))) {
-                    contextItems.push(item);
-                }
-            }
         }
 
         const result = await answerQuestionWithContext(question.trim(), contextItems);
