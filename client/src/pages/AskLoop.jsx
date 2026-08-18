@@ -136,28 +136,34 @@ function AskLoop() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [result, setResult] = useState(null);
-
-    const promptSuggestions = [
+    const [recentQueries, setRecentQueries] = useState([
+        "What are the biggest problems with payments?",
         "What are users saying about onboarding?",
-        "What are top checkout and billing complaints?",
         "What features do users love about the dashboard?",
-        "Why are users frustrated with mobile notifications?"
-    ];
+        "Why are users frustrated with mobile notifications?",
+        "What are the top complaints regarding login and authentication?"
+    ]);
 
     async function handleAsk(queryToSubmit) {
-        const query = queryToSubmit || question;
-        if (!query || !query.trim()) return;
+        const query = (queryToSubmit !== undefined ? queryToSubmit : question).trim();
+        if (!query) return;
 
         try {
             setLoading(true);
             setError("");
             setResult(null);
 
+            // Update recent queries list
+            setRecentQueries((prev) => {
+                const filtered = prev.filter((q) => q.toLowerCase() !== query.toLowerCase());
+                return [query, ...filtered].slice(0, 6);
+            });
+
             const res = await api.post("/ai/ask", { question: query });
             setResult(res.data);
         } catch (err) {
             console.error("Ask LOOP error:", err);
-            setError(err.response?.data?.message || "Failed to answer question. Please try again.");
+            setError(err.response?.data?.message || "Failed to analyze question. Please try again.");
         } finally {
             setLoading(false);
         }
@@ -168,10 +174,16 @@ function AskLoop() {
         handleAsk();
     }
 
+    function handleClear() {
+        setQuestion("");
+        setResult(null);
+        setError("");
+    }
+
     return (
         <div className="main-content">
             {/* Page Header */}
-            <div className="page-header" style={{ marginBottom: "1.75rem" }}>
+            <div className="page-header" style={{ marginBottom: "1.5rem" }}>
                 <div>
                     <h1 className="page-title" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                         <Sparkles size={26} color="var(--primary)" />
@@ -184,59 +196,96 @@ function AskLoop() {
             </div>
 
             {/* Q&A Input & Suggestions Section */}
-            <div className="auth-card" style={{ maxWidth: "860px", margin: "0 auto 2rem auto" }}>
+            <div className="auth-card" style={{ maxWidth: "880px", margin: "0 auto 2rem auto", padding: "24px" }}>
                 <form onSubmit={handleSubmit}>
-                    <div className="form-group" style={{ marginBottom: "1rem" }}>
-                        <label style={{ fontSize: "0.95rem", fontWeight: 700, display: "flex", alignItems: "center", gap: "6px", color: "var(--text-main)" }}>
-                            <HelpCircle size={18} color="var(--primary)" />
-                            <span>Ask a question about customer feedback</span>
-                        </label>
-                        <div style={{ display: "flex", gap: "10px", marginTop: "8px" }}>
+                    <div className="form-group" style={{ marginBottom: "1.25rem" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                            <label style={{ fontSize: "0.95rem", fontWeight: 700, display: "flex", alignItems: "center", gap: "6px", color: "var(--text-main)" }}>
+                                <HelpCircle size={18} color="var(--primary)" />
+                                <span>Ask a question about customer feedback</span>
+                            </label>
+                            {question && (
+                                <button
+                                    type="button"
+                                    onClick={handleClear}
+                                    style={{
+                                        background: "transparent",
+                                        border: "none",
+                                        color: "var(--text-muted)",
+                                        fontSize: "0.8rem",
+                                        cursor: "pointer",
+                                        fontWeight: 600
+                                    }}
+                                >
+                                    Clear Input
+                                </button>
+                            )}
+                        </div>
+
+                        <div style={{ display: "flex", gap: "10px" }}>
                             <input
                                 type="text"
                                 className="input-field"
-                                placeholder="e.g. What are users saying about onboarding?"
+                                placeholder="Type any question (e.g. Why are customers unhappy with payments?)..."
                                 value={question}
                                 onChange={(e) => setQuestion(e.target.value)}
                                 disabled={loading}
-                                style={{ fontSize: "0.95rem", padding: "12px 16px", flex: 1 }}
+                                autoFocus
+                                style={{
+                                    fontSize: "0.95rem",
+                                    padding: "12px 16px",
+                                    flex: 1,
+                                    border: "1px solid var(--border-light)",
+                                    borderRadius: "8px",
+                                    backgroundColor: "var(--bg-main)",
+                                    color: "var(--text-main)"
+                                }}
                             />
                             <button
                                 type="submit"
                                 className="btn-primary"
                                 disabled={loading || !question.trim()}
-                                style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "0 24px", minWidth: "110px", justifyContent: "center" }}
+                                style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "8px",
+                                    padding: "0 26px",
+                                    minWidth: "120px",
+                                    justifyContent: "center",
+                                    fontWeight: 700
+                                }}
                             >
                                 {loading ? (
                                     <Loader2 size={18} style={{ animation: "spin 1s linear infinite" }} />
                                 ) : (
                                     <Send size={18} />
                                 )}
-                                <span>{loading ? "Searching..." : "Ask"}</span>
+                                <span>{loading ? "Analyzing..." : "Ask AI"}</span>
                             </button>
                         </div>
                     </div>
                 </form>
 
-                {/* Prompt Suggestion Pills */}
-                <div style={{ marginTop: "1rem" }}>
+                {/* Suggested / Recent Question Pills */}
+                <div>
                     <span style={{ fontSize: "0.82rem", color: "var(--text-muted)", fontWeight: 600, display: "block", marginBottom: "8px" }}>
                         Suggested questions:
                     </span>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                        {promptSuggestions.map((prompt, idx) => (
+                        {recentQueries.map((prompt, idx) => (
                             <button
                                 key={idx}
                                 type="button"
                                 className="badge badge-channel"
                                 style={{
                                     cursor: "pointer",
-                                    padding: "6px 12px",
+                                    padding: "6px 14px",
                                     fontSize: "0.83rem",
                                     fontWeight: 600,
                                     border: "1px solid var(--border-light)",
                                     backgroundColor: "var(--bg-subtle)",
                                     color: "var(--text-main)",
+                                    borderRadius: "20px",
                                     transition: "all 0.2s"
                                 }}
                                 onClick={() => {
@@ -252,7 +301,7 @@ function AskLoop() {
             </div>
 
             {error && (
-                <div className="alert-error" style={{ maxWidth: "860px", margin: "0 auto 1.5rem auto" }}>
+                <div className="alert-error" style={{ maxWidth: "880px", margin: "0 auto 1.5rem auto" }}>
                     <AlertCircle size={18} />
                     <span>{error}</span>
                 </div>
@@ -260,7 +309,7 @@ function AskLoop() {
 
             {/* Answer Display & Cited Sources */}
             {result && (
-                <div style={{ maxWidth: "860px", margin: "0 auto" }}>
+                <div style={{ maxWidth: "880px", margin: "0 auto" }}>
                     {/* Grounded Answer Card */}
                     <div style={{
                         backgroundColor: "var(--bg-card)",
@@ -270,21 +319,42 @@ function AskLoop() {
                         marginBottom: "24px",
                         boxShadow: "var(--shadow-md)"
                     }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", paddingBottom: "12px", borderBottom: "1px solid var(--border-light)" }}>
+                        {/* Header Banner */}
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", paddingBottom: "14px", borderBottom: "1px solid var(--border-light)", flexWrap: "wrap", gap: "8px" }}>
                             <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--primary)", fontWeight: 700, fontSize: "1.05rem" }}>
                                 <Sparkles size={20} />
                                 <span>Grounded Answer</span>
                             </div>
 
-                            <div style={{ display: "inline-flex", alignItems: "center", gap: "5px", background: "rgba(34, 197, 94, 0.1)", color: "#16a34a", padding: "4px 10px", borderRadius: "20px", fontSize: "0.78rem", fontWeight: 700 }}>
+                            <div style={{ display: "inline-flex", alignItems: "center", gap: "5px", background: "rgba(34, 197, 94, 0.1)", color: "#16a34a", padding: "4px 12px", borderRadius: "20px", fontSize: "0.78rem", fontWeight: 700 }}>
                                 <ShieldCheck size={14} />
                                 <span>Grounded in Real Data</span>
                             </div>
                         </div>
 
+                        {/* Analyzed Question Pill */}
+                        {result.question && (
+                            <div style={{
+                                backgroundColor: "var(--bg-subtle)",
+                                border: "1px solid var(--border-light)",
+                                borderRadius: "8px",
+                                padding: "10px 14px",
+                                marginBottom: "18px",
+                                fontSize: "0.88rem",
+                                color: "var(--text-muted)",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "8px"
+                            }}>
+                                <span style={{ fontWeight: 700, color: "var(--primary)" }}>Question:</span>
+                                <span style={{ color: "var(--text-main)", fontWeight: 600 }}>"{result.question}"</span>
+                            </div>
+                        )}
+
                         {/* Point-by-point formatted answer */}
                         <FormattedAnswer answerText={result.answer} />
 
+                        {/* Footer Citation Status */}
                         <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.83rem", color: "var(--text-muted)", paddingTop: "14px", marginTop: "18px", borderTop: "1px solid var(--border-light)" }}>
                             <CheckCircle2 size={15} color="var(--primary)" />
                             <span>Cited from {result.citedFeedback ? result.citedFeedback.length : 0} workspace customer feedback records.</span>
