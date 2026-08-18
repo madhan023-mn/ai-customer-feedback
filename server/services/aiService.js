@@ -470,23 +470,21 @@ ${formattedContext}`;
         }
     });
 
-    const quotesFormatted = contextItems.slice(0, 3).map((item, idx) => 
-        `• "${item.content}" — *${item.customerLabel || "Customer"} (${item.channel})*`
+    const quotesFormatted = contextItems.slice(0, 3).map((item) => 
+        `• "${item.content}" — ${item.customerLabel || "Customer"} (${item.channel})`
     ).join("\n");
 
-    const answer = `### Grounded Analysis
+    const answer = `Based on ${totalFound} relevant customer feedback records retrieved from your workspace, user feedback regarding ${featureAreas.join(", ") || "this topic"} is ${sentimentSummary} (${posCount} Positive, ${negCount} Negative, ${neuCount} Neutral).
 
-Based on **${totalFound} relevant customer feedback records** retrieved from your workspace, user feedback regarding **${featureAreas.join(", ") || "this topic"}** is **${sentimentSummary}** (${posCount} Positive, ${negCount} Negative, ${neuCount} Neutral).
+Key Customer Findings & Themes:
+${keyThemesList.length > 0 ? keyThemesList.slice(0, 4).map(t => `• ${t}: High-frequency discussion point across customer feedback.`).join("\n") : `• Customer reports concentrate heavily in ${featureAreas.join(", ") || "General Product"} across ${channels.join(", ")}.`}
 
-### Key Customer Findings & Themes
-${keyThemesList.length > 0 ? keyThemesList.slice(0, 4).map(t => `• **${t}**: Customers frequently cite friction or friction-related delays.`).join("\n") : `• Customer reports concentrate heavily in **${featureAreas.join(", ") || "General Product"}** across ${channels.join(", ")}.`}
-
-### Representative Verbatim Quotes
+Representative Verbatim Quotes:
 ${quotesFormatted}
 
-### Recommended Product Actions
-1. **Prioritize Root Cause Investigation**: Address high-frequency friction points identified in **${featureAreas[0] || "core workflows"}**.
-2. **Close the Loop**: Follow up with affected users across ${channels.slice(0, 2).join(" and ") || "support channels"} to validate resolutions.`;
+Recommended Product Actions:
+• 1. Prioritize root cause investigation into issues reported in ${featureAreas[0] || "core workflows"}.
+• 2. Close the loop by following up with affected users across ${channels.slice(0, 2).join(" and ") || "support channels"}.`;
 
     return {
         answer,

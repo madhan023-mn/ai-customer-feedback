@@ -14,8 +14,122 @@ import {
     ArrowUpRight,
     HelpCircle,
     CheckCircle2,
-    ShieldCheck
+    ShieldCheck,
+    ListChecks
 } from "lucide-react";
+
+// Formats answer text into structured point-by-point sections without markdown symbols
+function FormattedAnswer({ answerText }) {
+    if (!answerText) return null;
+
+    // Remove any raw markdown hashes, stars, or brackets
+    const cleaned = answerText
+        .replace(/^###\s+/gm, "")
+        .replace(/^##\s+/gm, "")
+        .replace(/^#\s+/gm, "")
+        .replace(/\*\*(.*?)\*\*/g, "$1")
+        .replace(/\*(.*?)\*/g, "$1");
+
+    // Split into paragraphs / sections
+    const rawSections = cleaned.split(/\n\s*\n/).map(s => s.trim()).filter(Boolean);
+
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            {rawSections.map((sec, secIdx) => {
+                const lines = sec.split("\n").map(l => l.trim()).filter(Boolean);
+                if (lines.length === 0) return null;
+
+                const firstLine = lines[0];
+                const isHeading = firstLine.endsWith(":") ||
+                    /^(key customer findings|key findings|key themes|representative verbatim|verbatim quotes|recommended product actions|recommended actions|summary|grounded analysis)/i.test(firstLine);
+
+                if (isHeading) {
+                    const headingTitle = firstLine.replace(/:$/, "");
+                    const listItems = lines.slice(1);
+
+                    return (
+                        <div
+                            key={secIdx}
+                            style={{
+                                backgroundColor: "var(--bg-card)",
+                                border: "1px solid var(--border-light)",
+                                borderRadius: "12px",
+                                padding: "16px 20px"
+                            }}
+                        >
+                            <div style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "8px",
+                                fontWeight: 700,
+                                fontSize: "0.95rem",
+                                color: "var(--primary)",
+                                marginBottom: listItems.length > 0 ? "12px" : "0"
+                            }}>
+                                <ListChecks size={18} />
+                                <span>{headingTitle}</span>
+                            </div>
+
+                            {listItems.length > 0 && (
+                                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                                    {listItems.map((item, itemIdx) => {
+                                        const cleanItem = item.replace(/^[•\-\d\.]+\s*/, "");
+                                        return (
+                                            <div
+                                                key={itemIdx}
+                                                style={{
+                                                    display: "flex",
+                                                    alignItems: "flex-start",
+                                                    gap: "10px",
+                                                    fontSize: "0.92rem",
+                                                    lineHeight: "1.6",
+                                                    color: "var(--text-main)"
+                                                }}
+                                            >
+                                                <span style={{
+                                                    display: "inline-block",
+                                                    width: "6px",
+                                                    height: "6px",
+                                                    borderRadius: "50%",
+                                                    backgroundColor: "var(--primary)",
+                                                    marginTop: "8px",
+                                                    flexShrink: 0
+                                                }} />
+                                                <span>{cleanItem}</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    );
+                }
+
+                // Standard summary paragraph
+                return (
+                    <div
+                        key={secIdx}
+                        style={{
+                            fontSize: "0.96rem",
+                            lineHeight: "1.7",
+                            color: "var(--text-main)",
+                            backgroundColor: "rgba(59, 130, 246, 0.04)",
+                            border: "1px solid rgba(59, 130, 246, 0.15)",
+                            borderRadius: "12px",
+                            padding: "16px 20px"
+                        }}
+                    >
+                        {lines.map((l, lIdx) => (
+                            <p key={lIdx} style={{ margin: lIdx === 0 ? 0 : "8px 0 0 0" }}>
+                                {l}
+                            </p>
+                        ))}
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
 
 function AskLoop() {
     const [question, setQuestion] = useState("");
@@ -56,27 +170,24 @@ function AskLoop() {
 
     return (
         <div className="main-content">
-            <div className="page-header">
+            {/* Page Header */}
+            <div className="page-header" style={{ marginBottom: "1.75rem" }}>
                 <div>
                     <h1 className="page-title" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                        <Sparkles size={28} color="var(--primary)" />
-                        <span>Ask LOOP — Grounded Q&A (Vector RAG Engine)</span>
+                        <Sparkles size={26} color="var(--primary)" />
+                        <span>Ask LOOP — Q&A</span>
                     </h1>
                     <p className="page-subtitle">
-                        Ask plain-English questions. Semantic vector search retrieves top-K feedback before generating grounded answers.
+                        Ask questions about customer feedback and get instant AI-powered answers.
                     </p>
-                </div>
-                <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", backgroundColor: "rgba(109, 93, 252, 0.12)", color: "#6d5dfc", padding: "8px 14px", borderRadius: "20px", fontSize: "0.85rem", fontWeight: 700, border: "1px solid rgba(109, 93, 252, 0.25)" }}>
-                    <ShieldCheck size={16} />
-                    <span>Vector Semantic Retrieval Engine Active</span>
                 </div>
             </div>
 
             {/* Q&A Input & Suggestions Section */}
-            <div className="auth-card" style={{ maxWidth: "840px", margin: "0 auto 2rem auto" }}>
+            <div className="auth-card" style={{ maxWidth: "860px", margin: "0 auto 2rem auto" }}>
                 <form onSubmit={handleSubmit}>
                     <div className="form-group" style={{ marginBottom: "1rem" }}>
-                        <label style={{ fontSize: "1rem", fontWeight: 700, display: "flex", alignItems: "center", gap: "6px" }}>
+                        <label style={{ fontSize: "0.95rem", fontWeight: 700, display: "flex", alignItems: "center", gap: "6px", color: "var(--text-main)" }}>
                             <HelpCircle size={18} color="var(--primary)" />
                             <span>Ask a question about customer feedback</span>
                         </label>
@@ -88,13 +199,13 @@ function AskLoop() {
                                 value={question}
                                 onChange={(e) => setQuestion(e.target.value)}
                                 disabled={loading}
-                                style={{ fontSize: "1rem", padding: "12px 16px" }}
+                                style={{ fontSize: "0.95rem", padding: "12px 16px", flex: 1 }}
                             />
                             <button
                                 type="submit"
                                 className="btn-primary"
                                 disabled={loading || !question.trim()}
-                                style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "0 24px" }}
+                                style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "0 24px", minWidth: "110px", justifyContent: "center" }}
                             >
                                 {loading ? (
                                     <Loader2 size={18} style={{ animation: "spin 1s linear infinite" }} />
@@ -108,8 +219,8 @@ function AskLoop() {
                 </form>
 
                 {/* Prompt Suggestion Pills */}
-                <div style={{ marginTop: "1.25rem" }}>
-                    <span style={{ fontSize: "0.85rem", color: "var(--text-muted)", fontWeight: 600, display: "block", marginBottom: "8px" }}>
+                <div style={{ marginTop: "1rem" }}>
+                    <span style={{ fontSize: "0.82rem", color: "var(--text-muted)", fontWeight: 600, display: "block", marginBottom: "8px" }}>
                         Suggested questions:
                     </span>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
@@ -121,9 +232,11 @@ function AskLoop() {
                                 style={{
                                     cursor: "pointer",
                                     padding: "6px 12px",
-                                    fontSize: "0.85rem",
+                                    fontSize: "0.83rem",
                                     fontWeight: 600,
                                     border: "1px solid var(--border-light)",
+                                    backgroundColor: "var(--bg-subtle)",
+                                    color: "var(--text-main)",
                                     transition: "all 0.2s"
                                 }}
                                 onClick={() => {
@@ -139,7 +252,7 @@ function AskLoop() {
             </div>
 
             {error && (
-                <div className="alert-error" style={{ maxWidth: "840px", margin: "0 auto 1.5rem auto" }}>
+                <div className="alert-error" style={{ maxWidth: "860px", margin: "0 auto 1.5rem auto" }}>
                     <AlertCircle size={18} />
                     <span>{error}</span>
                 </div>
@@ -147,39 +260,32 @@ function AskLoop() {
 
             {/* Answer Display & Cited Sources */}
             {result && (
-                <div style={{ maxWidth: "840px", margin: "0 auto" }}>
+                <div style={{ maxWidth: "860px", margin: "0 auto" }}>
                     {/* Grounded Answer Card */}
                     <div style={{
-                        background: "linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(168, 85, 247, 0.08) 100%)",
-                        border: "1px solid rgba(99, 102, 241, 0.25)",
+                        backgroundColor: "var(--bg-card)",
+                        border: "1px solid var(--border-light)",
                         borderRadius: "16px",
                         padding: "24px",
                         marginBottom: "24px",
-                        boxShadow: "0 10px 25px -5px rgba(99, 102, 241, 0.1)"
+                        boxShadow: "var(--shadow-md)"
                     }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--primary)", fontWeight: 700, fontSize: "1.1rem" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", paddingBottom: "12px", borderBottom: "1px solid var(--border-light)" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--primary)", fontWeight: 700, fontSize: "1.05rem" }}>
                                 <Sparkles size={20} />
                                 <span>Grounded Answer</span>
                             </div>
 
-                            <div style={{ display: "inline-flex", alignItems: "center", gap: "5px", background: "rgba(34, 197, 94, 0.1)", color: "#16a34a", padding: "4px 10px", borderRadius: "20px", fontSize: "0.8rem", fontWeight: 700 }}>
+                            <div style={{ display: "inline-flex", alignItems: "center", gap: "5px", background: "rgba(34, 197, 94, 0.1)", color: "#16a34a", padding: "4px 10px", borderRadius: "20px", fontSize: "0.78rem", fontWeight: 700 }}>
                                 <ShieldCheck size={14} />
                                 <span>Grounded in Real Data</span>
                             </div>
                         </div>
 
-                        <div style={{
-                            fontSize: "1rem",
-                            lineHeight: 1.7,
-                            color: "var(--text-main)",
-                            whiteSpace: "pre-wrap",
-                            marginBottom: "16px"
-                        }}>
-                            {result.answer}
-                        </div>
+                        {/* Point-by-point formatted answer */}
+                        <FormattedAnswer answerText={result.answer} />
 
-                        <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.85rem", color: "var(--text-muted)", paddingTop: "12px", borderTop: "1px solid rgba(99, 102, 241, 0.15)" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.83rem", color: "var(--text-muted)", paddingTop: "14px", marginTop: "18px", borderTop: "1px solid var(--border-light)" }}>
                             <CheckCircle2 size={15} color="var(--primary)" />
                             <span>Cited from {result.citedFeedback ? result.citedFeedback.length : 0} workspace customer feedback records.</span>
                         </div>
@@ -187,8 +293,8 @@ function AskLoop() {
 
                     {/* Cited Feedback Sources Grid */}
                     {result.citedFeedback && result.citedFeedback.length > 0 && (
-                        <div className="table-card" style={{ padding: "24px" }}>
-                            <h3 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
+                        <div className="table-card" style={{ padding: "24px", marginBottom: "2rem" }}>
+                            <h3 style={{ fontSize: "1.05rem", fontWeight: 700, marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px", color: "var(--text-main)" }}>
                                 <Quote size={18} color="var(--primary)" />
                                 <span>Cited Feedback Sources ({result.citedFeedback.length})</span>
                             </h3>
@@ -211,7 +317,7 @@ function AskLoop() {
                                             </span>
                                         </div>
 
-                                        <blockquote className="quote-text" style={{ fontSize: "0.9rem", margin: "10px 0" }}>
+                                        <blockquote className="quote-text" style={{ fontSize: "0.88rem", margin: "10px 0", color: "var(--text-main)" }}>
                                             "{item.content}"
                                         </blockquote>
 
@@ -236,3 +342,4 @@ function AskLoop() {
 }
 
 export default AskLoop;
+
