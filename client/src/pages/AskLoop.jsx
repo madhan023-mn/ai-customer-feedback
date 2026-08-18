@@ -196,12 +196,12 @@ function AskLoop() {
             </div>
 
             {/* Q&A Input & Suggestions Section */}
-            <div className="auth-card" style={{ maxWidth: "880px", margin: "0 auto 2rem auto", padding: "24px" }}>
+            <div className="table-card" style={{ maxWidth: "900px", margin: "0 auto 2rem auto", padding: "26px", borderRadius: "16px" }}>
                 <form onSubmit={handleSubmit}>
-                    <div className="form-group" style={{ marginBottom: "1.25rem" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                            <label style={{ fontSize: "0.95rem", fontWeight: 700, display: "flex", alignItems: "center", gap: "6px", color: "var(--text-main)" }}>
-                                <HelpCircle size={18} color="var(--primary)" />
+                    <div style={{ marginBottom: "1.25rem" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                            <label style={{ fontSize: "1rem", fontWeight: 700, display: "flex", alignItems: "center", gap: "8px", color: "var(--text-main)" }}>
+                                <HelpCircle size={19} color="var(--primary)" />
                                 <span>Ask a question about customer feedback</span>
                             </label>
                             {question && (
@@ -212,7 +212,7 @@ function AskLoop() {
                                         background: "transparent",
                                         border: "none",
                                         color: "var(--text-muted)",
-                                        fontSize: "0.8rem",
+                                        fontSize: "0.82rem",
                                         cursor: "pointer",
                                         fontWeight: 600
                                     }}
@@ -222,37 +222,51 @@ function AskLoop() {
                             )}
                         </div>
 
-                        <div style={{ display: "flex", gap: "10px" }}>
-                            <input
-                                type="text"
-                                className="input-field"
-                                placeholder="Type any question (e.g. Why are customers unhappy with payments?)..."
-                                value={question}
-                                onChange={(e) => setQuestion(e.target.value)}
-                                disabled={loading}
-                                autoFocus
-                                style={{
-                                    fontSize: "0.95rem",
-                                    padding: "12px 16px",
-                                    flex: 1,
-                                    border: "1px solid var(--border-light)",
-                                    borderRadius: "8px",
-                                    backgroundColor: "var(--bg-main)",
-                                    color: "var(--text-main)"
-                                }}
-                            />
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px", width: "100%" }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <input
+                                    type="text"
+                                    placeholder="Type any question (e.g. Why are customers unhappy with payments?)..."
+                                    value={question}
+                                    onChange={(e) => setQuestion(e.target.value)}
+                                    disabled={loading}
+                                    autoFocus
+                                    style={{
+                                        width: "100%",
+                                        padding: "13px 18px",
+                                        fontSize: "0.98rem",
+                                        border: "1.5px solid var(--border-light)",
+                                        borderRadius: "10px",
+                                        backgroundColor: "var(--bg-main)",
+                                        color: "var(--text-main)",
+                                        outline: "none",
+                                        boxSizing: "border-box",
+                                        display: "block"
+                                    }}
+                                />
+                            </div>
                             <button
                                 type="submit"
-                                className="btn-primary"
                                 disabled={loading || !question.trim()}
                                 style={{
+                                    flexShrink: 0,
+                                    width: "auto",
+                                    minWidth: "125px",
+                                    padding: "13px 22px",
+                                    backgroundColor: "var(--primary)",
+                                    color: "white",
+                                    border: "none",
+                                    borderRadius: "10px",
+                                    fontWeight: 700,
+                                    fontSize: "0.95rem",
+                                    cursor: loading || !question.trim() ? "not-allowed" : "pointer",
+                                    opacity: loading || !question.trim() ? 0.6 : 1,
                                     display: "inline-flex",
                                     alignItems: "center",
-                                    gap: "8px",
-                                    padding: "0 26px",
-                                    minWidth: "120px",
                                     justifyContent: "center",
-                                    fontWeight: 700
+                                    gap: "8px",
+                                    boxShadow: "0 4px 14px rgba(59, 130, 246, 0.3)",
+                                    transition: "all 0.2s ease"
                                 }}
                             >
                                 {loading ? (
