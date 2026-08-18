@@ -1,7 +1,6 @@
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
-import { useTheme } from "../context/useTheme";
 import {
     MessageSquare,
     Sparkles,
@@ -10,29 +9,24 @@ import {
     LogIn,
     UserPlus,
     Shield,
-    Eye,
-    Sun,
-    Moon
+    Eye
 } from "lucide-react";
 
 function Landing() {
     const navigate = useNavigate();
     const { user, login } = useAuth();
-    const { theme, toggleTheme } = useTheme();
-
-    const isDark = theme === "dark";
 
     const colors = {
-        bg: isDark ? "#0b0f19" : "#f8fafc",
-        cardBg: isDark ? "#111827" : "#ffffff",
-        innerBg: isDark ? "#0f172a" : "#f1f5f9",
-        border: isDark ? "#1f2937" : "#e2e8f0",
-        textMain: isDark ? "#ffffff" : "#0f172a",
-        textMuted: isDark ? "#94a3b8" : "#64748b",
-        headerBg: isDark ? "rgba(11, 15, 25, 0.95)" : "rgba(255, 255, 255, 0.95)",
-        footerBg: isDark ? "#080c14" : "#f1f5f9",
-        btnSecondaryBg: isDark ? "#1e293b" : "#ffffff",
-        btnSecondaryBorder: isDark ? "#334155" : "#cbd5e1"
+        bg: "#f8fafc",
+        cardBg: "#ffffff",
+        innerBg: "#f1f5f9",
+        border: "#e2e8f0",
+        textMain: "#0f172a",
+        textMuted: "#64748b",
+        headerBg: "rgba(255, 255, 255, 0.95)",
+        footerBg: "#f1f5f9",
+        btnSecondaryBg: "#ffffff",
+        btnSecondaryBorder: "#cbd5e1"
     };
 
     async function handleDemoLogin(email) {
@@ -114,28 +108,8 @@ function Landing() {
                     </a>
                 </nav>
 
-                {/* Right Action Buttons + Theme Toggle */}
+                {/* Right Action Buttons */}
                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                    {/* Theme Toggle Button */}
-                    <button
-                        onClick={toggleTheme}
-                        style={{
-                            background: colors.btnSecondaryBg,
-                            border: `1px solid ${colors.btnSecondaryBorder}`,
-                            color: colors.textMain,
-                            borderRadius: "8px",
-                            padding: "8px",
-                            cursor: "pointer",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            transition: "all 0.2s"
-                        }}
-                        title={`Switch to ${isDark ? "Light" : "Dark"} Mode`}
-                        aria-label="Toggle Theme"
-                    >
-                        {isDark ? <Sun size={17} color="#fbbf24" /> : <Moon size={17} color="#3b82f6" />}
-                    </button>
 
                     {user ? (
                         <Link
