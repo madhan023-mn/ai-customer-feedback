@@ -8,6 +8,7 @@ import {
     Calendar,
     Lightbulb
 } from "lucide-react";
+import LoadingScreen from "../components/LoadingScreen";
 
 function Insights() {
     const [insights, setInsights] = useState([]);
@@ -33,11 +34,12 @@ function Insights() {
 
     if (loading) {
         return (
-            <div className="main-content">
-                <div className="loading-spinner" style={{ gap: "10px" }}>
-                    <Loader2 size={24} style={{ animation: "spin 1s linear infinite" }} />
-                    <span>Gathering product intelligence & AI insights...</span>
-                </div>
+            <div className="insights-page">
+                <LoadingScreen
+                    title="Generating AI Insights..."
+                    subtitle="Synthesizing recurring customer pain points, feature requests & product themes"
+                    minHeight="60vh"
+                />
             </div>
         );
     }

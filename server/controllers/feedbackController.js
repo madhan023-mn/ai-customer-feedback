@@ -7,7 +7,7 @@ const {
     queueFeedbackAnalysis,
     queueFeedbackAnalysisBulk
 } = require("../queues/feedbackJobProducer");
-const { processPendingFeedback } = require("../services/feedbackAiProcessor");
+const { processPendingFeedback, processSingleFeedback } = require("../services/feedbackAiProcessor");
 const { importFeedbackCSV } = require("./importController");
 
 const aiResultSchema =
@@ -124,18 +124,39 @@ async function getFeedbacks(req, res) {
         const skip = (pageNum - 1) * limitNum;
         const sortOrder = order === "asc" ? 1 : -1;
 
-        const [feedbacks, total] = await Promise.all([
+        const [feedbacks, total, aiSummaryAgg, totalInWorkspace] = await Promise.all([
             Feedback.find(query)
                 .sort({ [sortBy]: sortOrder })
                 .skip(skip)
                 .limit(limitNum),
-            Feedback.countDocuments(query)
+            Feedback.countDocuments(query),
+            Feedback.aggregate([
+                { $match: { workspace: req.user.workspace } },
+                { $group: { _id: "$aiStatus", count: { $sum: 1 } } }
+            ]),
+            Feedback.countDocuments({ workspace: req.user.workspace })
         ]);
+
+        const aiSummary = {
+            total: totalInWorkspace,
+            pending: 0,
+            completed: 0,
+            failed: 0,
+            processing: 0
+        };
+
+        aiSummaryAgg.forEach(item => {
+            if (item._id === "PENDING") aiSummary.pending = item.count;
+            else if (item._id === "COMPLETED") aiSummary.completed = item.count;
+            else if (item._id === "FAILED") aiSummary.failed = item.count;
+            else if (item._id === "PROCESSING") aiSummary.processing = item.count;
+        });
 
         res.json({
             feedbacks,
             feedback: feedbacks, // Support both response structures
             total,
+            aiSummary,
             page: pageNum,
             pages: Math.ceil(total / limitNum) || 1,
             pagination: {
@@ -181,7 +202,7 @@ async function getFeedbackStats(req, res) {
     try {
         const workspaceId = req.user.workspace;
 
-        const [total, sentimentAgg, channelAgg, statusAgg, recentCount] = await Promise.all([
+        const [total, sentimentAgg, channelAgg, statusAgg, aiStatusAgg, recentCount] = await Promise.all([
             Feedback.countDocuments({ workspace: workspaceId }),
             Feedback.aggregate([
                 { $match: { workspace: workspaceId } },
@@ -194,6 +215,10 @@ async function getFeedbackStats(req, res) {
             Feedback.aggregate([
                 { $match: { workspace: workspaceId } },
                 { $group: { _id: "$status", count: { $sum: 1 } } }
+            ]),
+            Feedback.aggregate([
+                { $match: { workspace: workspaceId } },
+                { $group: { _id: "$aiStatus", count: { $sum: 1 } } }
             ]),
             Feedback.countDocuments({
                 workspace: workspaceId,
@@ -222,12 +247,27 @@ async function getFeedbackStats(req, res) {
             if (item._id) status[item._id] = item.count;
         });
 
+        const aiStatus = {
+            total,
+            pending: 0,
+            completed: 0,
+            failed: 0,
+            processing: 0
+        };
+        aiStatusAgg.forEach(item => {
+            if (item._id === "PENDING") aiStatus.pending = item.count;
+            else if (item._id === "COMPLETED") aiStatus.completed = item.count;
+            else if (item._id === "FAILED") aiStatus.failed = item.count;
+            else if (item._id === "PROCESSING") aiStatus.processing = item.count;
+        });
+
         res.json({
             total,
             recent7Days: recentCount,
             sentiment,
             channels,
-            status
+            status,
+            aiStatus
         });
     } catch (error) {
         console.error("Get feedback stats error:", error);
@@ -309,7 +349,7 @@ async function deleteFeedback(req, res) {
     }
 }
 
-// Analyze single feedback item with AI
+// Analyze single feedback item with AI (supports force re-analysis)
 async function analyzeSingleFeedback(req, res) {
     try {
         const feedback = await Feedback.findOne({
@@ -323,48 +363,79 @@ async function analyzeSingleFeedback(req, res) {
             });
         }
 
-        feedback.aiStatus = "PROCESSING";
-        await feedback.save();
+        const updated = await processSingleFeedback(feedback._id, true);
 
-        try {
-            const result = await analyzeFeedback(feedback.content);
-            const validation = aiResultSchema.safeParse(result);
+        res.json({
+            message: "Feedback analyzed successfully",
+            feedback: updated
+        });
+    } catch (error) {
+        console.error("Analyze single feedback error:", error);
+        res.status(500).json({
+            message: error.message || "Failed to analyze feedback"
+        });
+    }
+}
 
-            if (!validation.success) {
-                feedback.aiStatus = "FAILED";
-                await feedback.save();
+// Analyze all pending feedback in the workspace
+async function analyzeAllPendingFeedback(req, res) {
+    try {
+        const workspace = req.user.workspace;
+        const requestedLimit = Number(req.body?.limit);
+        const query = Feedback.find({
+            workspace,
+            aiStatus: "PENDING"
+        }).sort({ createdAt: 1 });
 
-                return res.status(502).json({
-                    message: "AI returned invalid data"
-                });
-            }
+        if (requestedLimit && requestedLimit > 0) {
+            query.limit(requestedLimit);
+        }
 
-            feedback.sentiment = validation.data.sentiment;
-            feedback.sentimentScore = validation.data.sentimentScore;
-            feedback.featureArea = validation.data.featureArea;
-            feedback.rationale = validation.data.rationale;
-            feedback.aiStatus = "COMPLETED";
+        const pending = await query.exec();
 
-            await feedback.save();
-
-            res.json({
-                message: "Feedback analyzed successfully",
-                feedback
-            });
-        } catch (aiError) {
-            feedback.aiStatus = "FAILED";
-            await feedback.save();
-
-            console.error("AI Error:", aiError);
-
-            return res.status(502).json({
-                message: "AI analysis failed"
+        if (!pending.length) {
+            return res.json({
+                message: "No pending feedback found. All feedback has been analyzed!",
+                processed: 0,
+                successful: 0,
+                failed: 0,
+                remainingPending: 0
             });
         }
+
+        let successful = 0;
+        let failed = 0;
+
+        for (const feedback of pending) {
+            try {
+                const updated = await processSingleFeedback(feedback._id, true);
+                if (updated) {
+                    successful++;
+                } else {
+                    failed++;
+                }
+            } catch (error) {
+                console.error(`Failed to analyze ${feedback._id}:`, error.message);
+                failed++;
+            }
+        }
+
+        const remainingPending = await Feedback.countDocuments({
+            workspace,
+            aiStatus: "PENDING"
+        });
+
+        res.json({
+            message: `Processed ${pending.length} feedback. ${successful} successful, ${failed} failed.`,
+            processed: pending.length,
+            successful,
+            failed,
+            remainingPending
+        });
     } catch (error) {
-        console.error(error);
+        console.error("Analyze all pending feedback error:", error);
         res.status(500).json({
-            message: "Failed to analyze feedback"
+            message: error.message || "Failed to analyze pending feedback"
         });
     }
 }
@@ -640,6 +711,8 @@ module.exports = {
     deleteFeedback,
     analyzeFeedback: analyzeSingleFeedback,
     analyzeSingleFeedback,
+    analyzePendingFeedback: analyzeAllPendingFeedback,
+    analyzeAllPendingFeedback,
     retryAIAnalysis,
     importCSV: importFeedbackCSV,
     importFeedbackCsv: importFeedbackCSV,

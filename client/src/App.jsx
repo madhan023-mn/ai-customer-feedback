@@ -22,21 +22,15 @@ const Forbidden = lazy(() => import("./pages/Forbidden"));
 
 import ProtectedRoute from "./components/ProtectedRoute";
 import Navbar from "./components/Navbar";
+import LoadingScreen from "./components/LoadingScreen";
 
 function PageLoader() {
     return (
-        <div style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            minHeight: "60vh",
-            gap: "1rem",
-            color: "var(--text-muted)"
-        }}>
-            <div className="spinner" style={{ width: "36px", height: "36px" }}></div>
-            <span style={{ fontSize: "0.9rem" }}>Loading Project LOOP...</span>
-        </div>
+        <LoadingScreen
+            title="Initializing Project LOOP..."
+            subtitle="Preparing workspace telemetry, neural models & analytics engines"
+            minHeight="70vh"
+        />
     );
 }
 

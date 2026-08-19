@@ -34,6 +34,7 @@ import {
     AlertTriangle,
     ShieldAlert
 } from "lucide-react";
+import LoadingScreen from "../components/LoadingScreen";
 
 function Dashboard() {
     const { user } = useAuth();
@@ -83,10 +84,11 @@ function Dashboard() {
     if (loading) {
         return (
             <div className="main-content">
-                <div className="loading-spinner" style={{ gap: "10px", minHeight: "300px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <Loader2 size={24} style={{ animation: "spin 1s linear infinite" }} />
-                    <span>Loading dashboard statistics...</span>
-                </div>
+                <LoadingScreen
+                    title="Loading Workspace Intelligence..."
+                    subtitle="Compiling feedback statistics, sentiment breakdown & channel distribution"
+                    minHeight="60vh"
+                />
             </div>
         );
     }

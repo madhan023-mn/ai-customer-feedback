@@ -26,6 +26,7 @@ import {
     Radio,
     PieChart as PieIcon
 } from "lucide-react";
+import LoadingScreen from "../components/LoadingScreen";
 
 function Analytics() {
     const [data, setData] = useState(null);
@@ -118,10 +119,11 @@ function Analytics() {
     if (loading) {
         return (
             <div className="main-content">
-                <div className="loading-spinner" style={{ minHeight: "300px", display: "flex", alignItems: "center", justifyContent: "center", gap: "10px" }}>
-                    <Loader2 size={24} style={{ animation: "spin 1s linear infinite" }} />
-                    <span>Loading sentiment & theme analytics...</span>
-                </div>
+                <LoadingScreen
+                    title="Analyzing Workspace Analytics..."
+                    subtitle="Aggregating sentiment trends, channel distributions & theme breakdown metrics"
+                    minHeight="60vh"
+                />
             </div>
         );
     }

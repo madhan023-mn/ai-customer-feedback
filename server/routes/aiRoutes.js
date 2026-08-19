@@ -16,6 +16,13 @@ router.post(
 );
 
 router.post(
+    "/feedback/analyze-all",
+    auth,
+    allowRoles("ADMIN", "ANALYST"),
+    analyzePendingFeedback
+);
+
+router.post(
     "/feedback/analyze-pending",
     auth,
     allowRoles("ADMIN", "ANALYST"),

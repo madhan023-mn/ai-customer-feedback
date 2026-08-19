@@ -208,8 +208,9 @@ function Reports() {
                             padding: "24px",
                             marginBottom: "24px"
                         }}>
-                            <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--primary)", marginBottom: "10px" }}>
-                                📝 Executive Summary
+                            <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--primary)", marginBottom: "10px", display: "flex", alignItems: "center", gap: "8px" }}>
+                                <FileText size={18} />
+                                <span>Executive Summary</span>
                             </h3>
                             <p style={{ fontSize: "1rem", lineHeight: 1.7, color: "var(--text-main)", marginBottom: "16px" }}>
                                 {report.narrative.executiveSummary}

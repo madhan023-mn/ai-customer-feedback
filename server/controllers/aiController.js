@@ -1,8 +1,6 @@
 const Feedback = require("../models/Feedback");
-const { processFeedback } = require("../services/feedbackAiProcessor");
+const { processSingleFeedback } = require("../services/feedbackAiProcessor");
 const { answerQuestionWithContext, performVectorSearch } = require("../services/aiService");
-
-const MAX_BATCH_SIZE = 10;
 
 async function analyzeSingleFeedback(req, res) {
     try {
@@ -17,7 +15,7 @@ async function analyzeSingleFeedback(req, res) {
             });
         }
 
-        const result = await processFeedback(feedback._id, req.user.workspace);
+        const result = await processSingleFeedback(feedback._id, true);
 
         res.json({
             message: "Feedback analyzed successfully",
@@ -33,24 +31,25 @@ async function analyzeSingleFeedback(req, res) {
 
 async function analyzePendingFeedback(req, res) {
     try {
-        const limit = Math.min(
-            Number(req.body?.limit) || 10,
-            MAX_BATCH_SIZE
-        );
-
-        const pending = await Feedback.find({
+        const requestedLimit = Number(req.body?.limit);
+        const query = Feedback.find({
             workspace: req.user.workspace,
             aiStatus: "PENDING"
-        })
-        .sort({ createdAt: 1 })
-        .limit(limit);
+        }).sort({ createdAt: 1 });
+
+        if (requestedLimit && requestedLimit > 0) {
+            query.limit(requestedLimit);
+        }
+
+        const pending = await query.exec();
 
         if (!pending.length) {
             return res.json({
-                message: "No pending feedback found",
+                message: "No pending feedback found. All feedback has been analyzed!",
                 processed: 0,
                 successful: 0,
-                failed: 0
+                failed: 0,
+                remainingPending: 0
             });
         }
 
@@ -59,24 +58,34 @@ async function analyzePendingFeedback(req, res) {
 
         for (const feedback of pending) {
             try {
-                await processFeedback(feedback._id, req.user.workspace);
-                successful++;
+                const updated = await processSingleFeedback(feedback._id, true);
+                if (updated) {
+                    successful++;
+                } else {
+                    failed++;
+                }
             } catch (error) {
                 console.error(`Failed to analyze ${feedback._id}:`, error.message);
                 failed++;
             }
         }
 
+        const remainingPending = await Feedback.countDocuments({
+            workspace: req.user.workspace,
+            aiStatus: "PENDING"
+        });
+
         res.json({
-            message: "Batch analysis completed",
+            message: `Processed ${pending.length} feedback. ${successful} successful, ${failed} failed.`,
             processed: pending.length,
             successful,
-            failed
+            failed,
+            remainingPending
         });
     } catch (error) {
         console.error("Batch analysis error:", error);
         res.status(500).json({
-            message: "Batch analysis failed"
+            message: error.message || "Batch analysis failed"
         });
     }
 }

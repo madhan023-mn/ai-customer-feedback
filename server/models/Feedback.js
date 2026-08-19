@@ -71,6 +71,24 @@ const feedbackSchema = new mongoose.Schema(
             trim: true
         },
 
+        issue: {
+            type: String,
+            trim: true,
+            default: "NONE"
+        },
+
+        severity: {
+            type: String,
+            enum: ["HIGH", "MEDIUM", "LOW", "NONE"],
+            default: "LOW"
+        },
+
+        priority: {
+            type: String,
+            enum: ["HIGH", "MEDIUM", "LOW"],
+            default: "LOW"
+        },
+
         aiError: {
             type: String,
             default: null

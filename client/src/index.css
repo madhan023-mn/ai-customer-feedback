@@ -331,13 +331,13 @@ textarea {
     width: calc(100% - 260px);
     max-width: 100%;
     overflow-x: hidden;
-    padding: 2rem 2.5rem;
+    padding: 1.5rem 2rem;
     box-sizing: border-box;
 }
 
 .main-content {
     width: 100%;
-    max-width: 1280px;
+    max-width: 100%;
     margin: 0 auto;
     box-sizing: border-box;
 }
@@ -880,22 +880,24 @@ textarea {
     width: 100%;
     border-collapse: collapse;
     text-align: left;
+    table-layout: auto;
 }
 
 .custom-table th {
     background: #f8fafc;
-    padding: 14px 18px;
-    font-size: 0.8rem;
+    padding: 12px 14px;
+    font-size: 0.78rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: var(--text-muted);
     border-bottom: 1px solid var(--border-light);
+    white-space: nowrap;
 }
 
 .custom-table td {
-    padding: 16px 18px;
-    font-size: 0.9rem;
+    padding: 12px 14px;
+    font-size: 0.88rem;
     border-bottom: 1px solid var(--border-light);
     color: var(--text-main);
     vertical-align: top;
@@ -907,8 +909,8 @@ textarea {
 
 .feedback-content-text {
     font-weight: 500;
-    line-height: 1.5;
-    max-width: 480px;
+    line-height: 1.45;
+    word-break: break-word;
 }
 
 .feedback-meta {
@@ -919,10 +921,12 @@ textarea {
 }
 
 .rationale-text {
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     color: var(--text-muted);
     font-style: italic;
     margin-top: 4px;
+    line-height: 1.4;
+    word-break: break-word;
 }
 
 /* Tabs */
@@ -1027,6 +1031,141 @@ textarea {
     padding: 4rem;
     color: var(--primary);
     font-weight: 700;
+}
+
+/* Modern Animated Page Loader & Shimmer Effects */
+@keyframes loop-pulse-glow {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(109, 93, 252, 0.4), 0 0 25px rgba(168, 85, 247, 0.2);
+    }
+    50% {
+        transform: scale(1.05);
+        box-shadow: 0 0 0 16px rgba(109, 93, 252, 0), 0 0 35px rgba(168, 85, 247, 0.4);
+    }
+}
+
+@keyframes loop-spin-slow {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes loop-spin-reverse {
+    from {
+        transform: rotate(360deg);
+    }
+    to {
+        transform: rotate(0deg);
+    }
+}
+
+@keyframes loop-shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+@keyframes loop-float {
+    0%, 100% {
+        transform: translateY(0px);
+    }
+    50% {
+        transform: translateY(-5px);
+    }
+}
+
+.loop-page-loader-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    padding: 3rem 1rem;
+    animation: loop-float 3s ease-in-out infinite;
+}
+
+.loop-loader-orb {
+    position: relative;
+    width: 72px;
+    height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 24px;
+}
+
+.loop-loader-ring-outer {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 3px solid transparent;
+    border-top-color: #6d5dfc;
+    border-right-color: #a855f7;
+    animation: loop-spin-slow 1.2s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite;
+}
+
+.loop-loader-ring-inner {
+    position: absolute;
+    inset: 8px;
+    border-radius: 50%;
+    border: 2px dashed rgba(109, 93, 252, 0.35);
+    animation: loop-spin-reverse 3s linear infinite;
+}
+
+.loop-loader-core {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #6d5dfc 0%, #a855f7 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    box-shadow: 0 4px 15px rgba(109, 93, 252, 0.4);
+    animation: loop-pulse-glow 2s ease-in-out infinite;
+}
+
+.loop-loader-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin: 0 0 6px 0;
+    letter-spacing: -0.01em;
+}
+
+.loop-loader-subtitle {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin: 0 0 18px 0;
+    text-align: center;
+    max-width: 340px;
+}
+
+.loop-loader-progress-bar {
+    width: 180px;
+    height: 4px;
+    background: #e2e8f0;
+    border-radius: 999px;
+    overflow: hidden;
+    position: relative;
+}
+
+.loop-loader-progress-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(90deg, #6d5dfc 0%, #a855f7 50%, #6d5dfc 100%);
+    background-size: 200% 100%;
+    animation: loop-shimmer 1.5s linear infinite;
 }
 
 /* Theme & Insights styles */

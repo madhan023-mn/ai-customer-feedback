@@ -14,6 +14,7 @@ const {
     updateFeedbackStatus,
     deleteFeedback,
     analyzeFeedback,
+    analyzeAllPendingFeedback,
     retryAIAnalysis,
     importCSV,
     importFeedbackCsv,
@@ -30,7 +31,11 @@ router.post("/", auth, allowRoles("ADMIN", "ANALYST"), createFeedback);
 // Simulate channel integration pull
 router.post("/simulate", auth, allowRoles("ADMIN", "ANALYST"), simulateChannelIngestion);
 
-// AI analysis & retry routes
+// AI batch analysis routes
+router.post("/analyze-all", auth, allowRoles("ADMIN", "ANALYST"), analyzeAllPendingFeedback);
+router.post("/analyze-pending", auth, allowRoles("ADMIN", "ANALYST"), analyzeAllPendingFeedback);
+
+// AI single analysis & retry routes
 router.post("/:id/analyze", auth, allowRoles("ADMIN", "ANALYST"), analyzeFeedback);
 router.post("/:id/retry-ai", auth, allowRoles("ADMIN", "ANALYST"), retryAIAnalysis);
 

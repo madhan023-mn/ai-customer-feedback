@@ -4,12 +4,13 @@ const FeedbackTheme = require("../models/FeedbackTheme");
 const Embedding = require("../models/Embedding");
 const { analyzeFeedback, generateEmbedding } = require("./aiService");
 
-async function claimFeedback(feedbackId) {
+async function claimFeedback(feedbackId, force = false) {
+    const statusQuery = force
+        ? { _id: feedbackId }
+        : { _id: feedbackId, aiStatus: { $in: ["PENDING", "FAILED"] } };
+
     return Feedback.findOneAndUpdate(
-        {
-            _id: feedbackId,
-            aiStatus: { $in: ["PENDING", "FAILED"] }
-        },
+        statusQuery,
         {
             $set: {
                 aiStatus: "PROCESSING"
@@ -21,10 +22,10 @@ async function claimFeedback(feedbackId) {
     );
 }
 
-async function processSingleFeedback(feedbackOrId) {
+async function processSingleFeedback(feedbackOrId, force = false) {
     const feedbackId = typeof feedbackOrId === "object" ? feedbackOrId._id : feedbackOrId;
 
-    const claimed = await claimFeedback(feedbackId);
+    const claimed = await claimFeedback(feedbackId, force);
     if (!claimed) {
         return null;
     }
@@ -97,6 +98,9 @@ async function processSingleFeedback(feedbackOrId) {
                     sentimentScore: result.sentimentScore,
                     themes: extractedThemeNames.length > 0 ? extractedThemeNames : [result.featureArea],
                     featureArea: result.featureArea,
+                    issue: result.issue || "NONE",
+                    severity: result.severity || "LOW",
+                    priority: result.priority || "LOW",
                     rationale: result.rationale,
                     embedding: vector,
                     aiStatus: "COMPLETED",

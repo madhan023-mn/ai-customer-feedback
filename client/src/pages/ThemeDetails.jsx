@@ -16,6 +16,7 @@ import {
     Meh,
     Frown,
     AlertCircle,
+    ShieldAlert,
     Loader2,
     MessageSquare,
     Sparkles,
@@ -28,6 +29,7 @@ import {
     Calendar,
     ArrowUpRight
 } from "lucide-react";
+import LoadingScreen from "../components/LoadingScreen";
 
 function ThemeDetails() {
     const { theme } = useParams();
@@ -74,11 +76,12 @@ function ThemeDetails() {
 
     if (loading) {
         return (
-            <div className="main-content">
-                <div className="loading-spinner" style={{ gap: "10px" }}>
-                    <Loader2 size={24} style={{ animation: "spin 1s linear infinite" }} />
-                    <span>Loading theme analytics...</span>
-                </div>
+            <div className="theme-details-page">
+                <LoadingScreen
+                    title={`Analyzing ${decodeURIComponent(theme || "")} Theme...`}
+                    subtitle="Fetching longitudinal trend charts, sentiment distribution & customer feedback"
+                    minHeight="60vh"
+                />
             </div>
         );
     }
@@ -99,8 +102,9 @@ function ThemeDetails() {
     }
 
     const sentiment = data?.sentiment || { positive: 0, neutral: 0, negative: 0 };
-    const negRate = Number(data?.negativePercentage || 0).toFixed(1);
+    const negRate = Number(data?.negativeFeedbackRate ?? data?.negativePercentage ?? 0).toFixed(1);
     const trendDirection = data?.trendDirection || "STABLE";
+    const priority = data?.priority || (Number(negRate) >= 40 ? "HIGH" : Number(negRate) >= 15 ? "MEDIUM" : "LOW");
 
     return (
         <div className="theme-details-page">
@@ -111,8 +115,36 @@ function ThemeDetails() {
 
             <div className="theme-details-header">
                 <div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "6px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "6px", flexWrap: "wrap" }}>
                         <h1 className="page-title" style={{ margin: 0 }}>{data.theme} Theme</h1>
+
+                        {/* Priority Badge */}
+                        <span
+                            style={{
+                                fontSize: "0.78rem",
+                                fontWeight: 800,
+                                padding: "4px 12px",
+                                borderRadius: "8px",
+                                textTransform: "uppercase",
+                                letterSpacing: "0.04em",
+                                background: priority === "HIGH" ? "#fee2e2" : priority === "MEDIUM" ? "#fef3c7" : "#dcfce7",
+                                color: priority === "HIGH" ? "#991b1b" : priority === "MEDIUM" ? "#92400e" : "#166534",
+                                border: priority === "HIGH" ? "1px solid #fca5a5" : priority === "MEDIUM" ? "1px solid #fde68a" : "1px solid #86efac",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "6px"
+                            }}
+                        >
+                            {priority === "HIGH" ? (
+                                <ShieldAlert size={14} color="#dc2626" />
+                            ) : priority === "MEDIUM" ? (
+                                <AlertCircle size={14} color="#d97706" />
+                            ) : (
+                                <CheckCircle2 size={14} color="#16a34a" />
+                            )}
+                            <span>{priority} Priority</span>
+                        </span>
+
                         <span className="trend-badge" style={{
                             backgroundColor: trendDirection === "INCREASING" ? "rgba(239, 68, 68, 0.1)" : trendDirection === "DECREASING" ? "rgba(34, 197, 94, 0.1)" : "#f1f5f9",
                             color: trendDirection === "INCREASING" ? "#dc2626" : trendDirection === "DECREASING" ? "#16a34a" : "#475467",
@@ -143,7 +175,7 @@ function ThemeDetails() {
 
                     <div className="negative-rate">
                         <strong>{negRate}%</strong>
-                        <span>Negative Ratio</span>
+                        <span>Negative Feedback Rate</span>
                     </div>
                 </div>
             </div>

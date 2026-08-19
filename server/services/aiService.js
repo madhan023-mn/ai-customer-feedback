@@ -45,22 +45,38 @@ Required JSON format:
 {
     "sentiment": "POS" | "NEU" | "NEG",
     "sentimentScore": number between -1 and 1,
+    "featureArea": string (must be one of the allowed feature areas),
     "themes": [
-        { "name": "Specific Theme Name", "confidence": number between 0 and 1 }
+        { "name": "Canonical Theme Name", "confidence": number between 0 and 1 }
     ],
-    "featureArea": string,
+    "issue": string ("NONE" if positive or neutral; or a specific problem title if negative),
+    "severity": "HIGH" | "MEDIUM" | "LOW" | "NONE",
+    "priority": "HIGH" | "MEDIUM" | "LOW",
     "rationale": string
 }
 
 Allowed feature areas:
 ${FEATURE_AREAS.join("\n")}
 
-Rules:
-- sentiment must be POS, NEU, or NEG.
-- sentimentScore must be between -1 and 1.
-- themes MUST be an array of 1-3 specific named themes with confidence score (0 to 1).
-- featureArea MUST be one of the allowed feature areas listed above.
-- rationale should briefly explain the classification.
+CRITICAL CLASSIFICATION & HIERARCHY RULES:
+1. Separate Feature/Topic from Issue/Theme:
+   - Feature: High-level area (e.g. Authentication, Checkout, Payments, Dashboard, Mobile, Support, Search, Onboarding, Notifications, Performance).
+   - Theme: Canonical topic cluster:
+     * Positive/Neutral Theme Examples: "Login Experience", "Checkout Experience", "Payment Process", "Dashboard UI", "Mobile Experience", "Customer Support", "Onboarding Experience".
+     * Negative/Problem Theme Examples: "Login Failure", "Checkout Payment Failure", "Payment Failure", "Dashboard Performance", "App Stability & Crashes", "Support Ticket SLA", "Onboarding Friction".
+   - Issue: Specific problem name (e.g. "Checkout Payment Failure", "Password Reset Failure", "Authentication Problem") or "NONE" if positive/neutral.
+2. DO NOT classify feedback as an issue or problem merely because it contains feature keywords such as "login", "payment", "checkout", "auth", "mobile", "speed", "support", etc.
+3. Positive feedback MUST NOT be classified as an issue:
+   - Example: "The login process is fast." -> Feature: Authentication, Theme: Login Experience, Sentiment: POS, Issue: "NONE", Severity: "NONE", Priority: "LOW".
+   - Example: "Checkout was smooth and effortless." -> Feature: Checkout, Theme: Checkout Experience, Sentiment: POS, Issue: "NONE", Severity: "NONE", Priority: "LOW".
+   - Example: "Checkout payment works perfectly." -> Feature: Checkout, Theme: Checkout Experience, Sentiment: POS, Issue: "NONE", Severity: "NONE", Priority: "LOW".
+4. Negative feedback MUST identify specific friction:
+   - Example: "I cannot log into my account." -> Feature: Authentication, Theme: Login Failure, Sentiment: NEG, Issue: "Authentication Problem", Severity: "HIGH", Priority: "HIGH".
+   - Example: "Checkout failed after I entered my card." -> Feature: Checkout, Theme: Checkout Payment Failure, Sentiment: NEG, Issue: "Checkout Payment Failure", Severity: "HIGH", Priority: "HIGH".
+5. Priority calculation rule:
+   - HIGH: Critical blockers, failed transactions/payments, account lockouts, app crashes, or severe friction.
+   - MEDIUM: Delays, usability confusion, moderate latency, missing minor features.
+   - LOW: Positive praise, general compliments, minor inquiries, or non-blocking feedback.
 
 Customer feedback text:
 "${content}"`;
@@ -72,18 +88,28 @@ Customer feedback text:
             if (jsonMatch) {
                 const parsed = JSON.parse(jsonMatch[0]);
                 const validFeature = FEATURE_AREAS.includes(parsed.featureArea) ? parsed.featureArea : "Other";
+                const sentiment = ALLOWED_SENTIMENTS.includes(parsed.sentiment) ? parsed.sentiment : "NEU";
+                
+                const defaultThemeSuffix = sentiment === "POS" ? "Experience" : sentiment === "NEG" ? "Failure" : "Feedback";
                 const extractedThemes = Array.isArray(parsed.themes) && parsed.themes.length > 0
                     ? parsed.themes.map(t => ({
                         name: typeof t === "object" && t.name ? String(t.name).trim() : String(t).trim(),
                         confidence: typeof t === "object" && typeof t.confidence === "number" ? Math.min(1, Math.max(0, t.confidence)) : 0.88
                     }))
-                    : [{ name: `${validFeature} Issues`, confidence: 0.85 }];
+                    : [{ name: `${validFeature} ${defaultThemeSuffix}`, confidence: 0.85 }];
+
+                const issue = sentiment === "POS" ? "NONE" : (parsed.issue || (sentiment === "NEG" ? `${validFeature} Issue` : "NONE"));
+                const severity = sentiment === "POS" ? "NONE" : (["HIGH", "MEDIUM", "LOW", "NONE"].includes(parsed.severity) ? parsed.severity : (sentiment === "NEG" ? "MEDIUM" : "LOW"));
+                const priority = sentiment === "POS" ? "LOW" : (["HIGH", "MEDIUM", "LOW"].includes(parsed.priority) ? parsed.priority : (severity === "HIGH" ? "HIGH" : "MEDIUM"));
 
                 return {
-                    sentiment: ALLOWED_SENTIMENTS.includes(parsed.sentiment) ? parsed.sentiment : "NEU",
-                    sentimentScore: typeof parsed.sentimentScore === "number" ? parsed.sentimentScore : 0,
+                    sentiment,
+                    sentimentScore: typeof parsed.sentimentScore === "number" ? parsed.sentimentScore : (sentiment === "POS" ? 0.8 : sentiment === "NEG" ? -0.8 : 0),
                     themes: extractedThemes,
                     featureArea: validFeature,
+                    issue,
+                    severity,
+                    priority,
                     rationale: parsed.rationale || "Analyzed by Google Gemini AI."
                 };
             }
@@ -103,7 +129,8 @@ Customer feedback text:
                 messages: [
                     {
                         role: "system",
-                        content: `You are a customer feedback analysis system. Return ONLY valid JSON with sentiment, sentimentScore (-1..1), themes (array of { name, confidence }), featureArea, and rationale.`
+                        content: `You are a customer feedback intelligence system. Return ONLY valid JSON with sentiment (POS/NEU/NEG), sentimentScore (-1..1), featureArea (one of: ${FEATURE_AREAS.join(", ")}), themes (array of { name, confidence }), issue ("NONE" if positive/neutral, or specific problem string), severity ("HIGH"|"MEDIUM"|"LOW"|"NONE"), priority ("HIGH"|"MEDIUM"|"LOW"), and rationale.
+CRITICAL: Separate Feature from Theme/Issue. Positive statements about features (e.g. "The login process is fast") MUST have sentiment POS, score > 0, issue: "NONE", severity: "NONE", priority: "LOW", and positive theme (e.g. "Login Experience"), NEVER negative issue themes.`
                     },
                     {
                         role: "user",
@@ -117,18 +144,27 @@ Customer feedback text:
             if (jsonMatch) {
                 const parsed = JSON.parse(jsonMatch[0]);
                 const validFeature = FEATURE_AREAS.includes(parsed.featureArea) ? parsed.featureArea : "Other";
+                const sentiment = ALLOWED_SENTIMENTS.includes(parsed.sentiment) ? parsed.sentiment : "NEU";
+                const defaultThemeSuffix = sentiment === "POS" ? "Experience" : sentiment === "NEG" ? "Failure" : "Feedback";
                 const extractedThemes = Array.isArray(parsed.themes) && parsed.themes.length > 0
                     ? parsed.themes.map(t => ({
                         name: typeof t === "object" && t.name ? String(t.name).trim() : String(t).trim(),
                         confidence: typeof t === "object" && typeof t.confidence === "number" ? Math.min(1, Math.max(0, t.confidence)) : 0.90
                     }))
-                    : [{ name: `${validFeature} Issues`, confidence: 0.85 }];
+                    : [{ name: `${validFeature} ${defaultThemeSuffix}`, confidence: 0.85 }];
+
+                const issue = sentiment === "POS" ? "NONE" : (parsed.issue || (sentiment === "NEG" ? `${validFeature} Issue` : "NONE"));
+                const severity = sentiment === "POS" ? "NONE" : (["HIGH", "MEDIUM", "LOW", "NONE"].includes(parsed.severity) ? parsed.severity : (sentiment === "NEG" ? "MEDIUM" : "LOW"));
+                const priority = sentiment === "POS" ? "LOW" : (["HIGH", "MEDIUM", "LOW"].includes(parsed.priority) ? parsed.priority : (severity === "HIGH" ? "HIGH" : "MEDIUM"));
 
                 return {
-                    sentiment: ALLOWED_SENTIMENTS.includes(parsed.sentiment) ? parsed.sentiment : "NEU",
-                    sentimentScore: typeof parsed.sentimentScore === "number" ? parsed.sentimentScore : 0,
+                    sentiment,
+                    sentimentScore: typeof parsed.sentimentScore === "number" ? parsed.sentimentScore : (sentiment === "POS" ? 0.8 : sentiment === "NEG" ? -0.8 : 0),
                     themes: extractedThemes,
                     featureArea: validFeature,
+                    issue,
+                    severity,
+                    priority,
                     rationale: parsed.rationale || "Analyzed by OpenAI model."
                 };
             }
@@ -137,57 +173,320 @@ Customer feedback text:
         }
     }
 
-    // 3. Heuristic Fallback Engine
-    const text = (content || "").toLowerCase();
-    let sentiment = "NEU";
-    let sentimentScore = 0;
-    let featureArea = "Other";
-    let rationale = "Automated AI analysis based on feedback text.";
+    // 3. Intelligent Context-Aware Heuristic Fallback Engine
+    const rawText = String(content || "");
+    const lowerText = rawText.toLowerCase();
 
-    if (text.includes("love") || text.includes("great") || text.includes("awesome") || text.includes("good") || text.includes("easy") || text.includes("like")) {
-        sentiment = "POS";
-        sentimentScore = 0.85;
-        rationale = "Positive feedback highlighting user satisfaction.";
-    } else if (text.includes("bug") || text.includes("slow") || text.includes("bad") || text.includes("fail") || text.includes("error") || text.includes("issue") || text.includes("crash") || text.includes("broken") || text.includes("frustrat")) {
-        sentiment = "NEG";
-        sentimentScore = -0.8;
-        rationale = "Negative feedback detailing product issues or user friction.";
+    // Word lists for sentiment
+    const strongPositiveWords = [
+        "love", "loves", "loved", "loving", "awesome", "amazing", "excellent", "superb",
+        "fantastic", "outstanding", "perfect", "transformed", "best", "5 star", "5 stars",
+        "10/10", "huge fan", "champion", "delight", "delighted", "super fast", "super easy",
+        "flawless", "flawlessly", "breeze", "effortless", "effortlessly", "without hassle",
+        "without any hassle", "no hassle", "hassle-free", "hassle free", "works perfectly",
+        "working perfectly", "very fast", "very smooth"
+    ];
+    const generalPositiveWords = [
+        "fast", "quick", "speedy", "smooth", "smoothly", "easy", "easily", "good", "great",
+        "like", "likes", "liked", "helpful", "reliable", "responsive", "seamless", "seamlessly",
+        "pleased", "happy", "intuitive", "clean", "saved", "saving", "resolved", "prompt",
+        "improved", "worth", "solid", "enjoy", "appreciate", "nice", "instant", "instantly"
+    ];
+
+    const strongNegativeWords = [
+        "crash", "crashes", "crashing", "crashed", "broken", "fail", "failed", "failing", "failure",
+        "worst", "terrible", "horrible", "awful", "hate", "hated", "useless", "unusable",
+        "frustrat", "frustrated", "frustrating", "1 star", "2/10", "unacceptable", "scam"
+    ];
+    const generalNegativeWords = [
+        "slow", "slowly", "bug", "bugs", "buggy", "error", "errors", "freeze", "freezing", "frozen",
+        "issue", "issues", "problem", "problems", "bad", "delay", "delayed", "delays", "lag", "laggy",
+        "timeout", "timed out", "can't", "cannot", "couldn't", "unable", "stuck", "lost", "poor",
+        "glitch", "glitches", "difficult", "confusing", "down", "doesn't work", "broken", "trouble"
+    ];
+
+    let posScore = 0;
+    let negScore = 0;
+
+    // Check strong positives
+    for (const w of strongPositiveWords) {
+        if (lowerText.includes(w)) posScore += 2.5;
+    }
+    // Check general positives
+    for (const w of generalPositiveWords) {
+        if (lowerText.includes(w)) {
+            // Check if negated: "not fast", "not easy", "not good", "never fast"
+            const negMatch = new RegExp(`\\b(not|never|hardly|no)\\s+${w}\\b`, "i").test(lowerText);
+            if (negMatch) {
+                negScore += 1.5;
+            } else {
+                posScore += 1.2;
+            }
+        }
     }
 
-    const themeMap = [];
+    // Check strong negatives
+    for (const w of strongNegativeWords) {
+        if (lowerText.includes(w)) negScore += 2.5;
+    }
+    // Check general negatives
+    for (const w of generalNegativeWords) {
+        if (lowerText.includes(w)) {
+            // Check if negated: "no issues", "no problem", "not slow", "not bad"
+            const negNegMatch = new RegExp(`\\b(no|not|without|never)\\s+${w}\\b`, "i").test(lowerText);
+            if (negNegMatch) {
+                posScore += 1.0;
+            } else {
+                negScore += 1.2;
+            }
+        }
+    }
 
-    if (text.includes("checkout") || text.includes("cart") || text.includes("buy")) {
-        featureArea = "Checkout";
-        themeMap.push({ name: "Checkout Problem", confidence: 0.92 }, { name: "Checkout Payment Failure", confidence: 0.88 });
-    } else if (text.includes("dashboard") || text.includes("kpi") || text.includes("chart")) {
-        featureArea = "Dashboard";
-        themeMap.push({ name: "Dashboard Latency", confidence: 0.90 }, { name: "UI Refresh", confidence: 0.85 });
-    } else if (text.includes("mobile") || text.includes("app") || text.includes("ios") || text.includes("android")) {
-        featureArea = "Mobile";
-        themeMap.push({ name: "Mobile Crash", confidence: 0.94 }, { name: "App Stability", confidence: 0.87 });
-    } else if (text.includes("search") || text.includes("filter") || text.includes("find")) {
-        featureArea = "Search";
-        themeMap.push({ name: "Search Filter Speed", confidence: 0.91 }, { name: "Result Highlighting", confidence: 0.86 });
-    } else if (text.includes("payment") || text.includes("card") || text.includes("stripe") || text.includes("billing")) {
-        featureArea = "Payments";
-        themeMap.push({ name: "Payment Failure", confidence: 0.95 }, { name: "Invoice Billing", confidence: 0.89 });
-    } else if (text.includes("login") || text.includes("auth") || text.includes("password") || text.includes("signup") || text.includes("session")) {
-        featureArea = "Authentication";
-        themeMap.push({ name: "Login Issues", confidence: 0.93 }, { name: "Authentication Problems", confidence: 0.88 });
-    } else if (text.includes("onboard") || text.includes("wizard") || text.includes("tour")) {
-        featureArea = "Onboarding";
-        themeMap.push({ name: "Onboarding Latency", confidence: 0.91 }, { name: "Team Invitation Flow", confidence: 0.89 });
-    } else if (text.includes("support") || text.includes("ticket") || text.includes("agent") || text.includes("help")) {
-        featureArea = "Support";
-        themeMap.push({ name: "Support Ticket SLA", confidence: 0.90 }, { name: "Agent Responsiveness", confidence: 0.87 });
-    } else if (text.includes("notification") || text.includes("alert") || text.includes("email")) {
-        featureArea = "Notifications";
-        themeMap.push({ name: "Notification Latency", confidence: 0.89 }, { name: "Email Verification", confidence: 0.86 });
-    } else if (text.includes("speed") || text.includes("load") || text.includes("performance") || text.includes("latency") || text.includes("lag")) {
-        featureArea = "Performance";
-        themeMap.push({ name: "Performance Bottleneck", confidence: 0.92 }, { name: "System Latency", confidence: 0.88 });
+    let sentiment = "NEU";
+    let sentimentScore = 0;
+
+    if (posScore > negScore && posScore >= 1.0) {
+        sentiment = "POS";
+        sentimentScore = Math.min(0.95, Math.max(0.4, Number((0.4 + (posScore * 0.15)).toFixed(2))));
+    } else if (negScore > posScore && negScore >= 1.0) {
+        sentiment = "NEG";
+        sentimentScore = Math.max(-0.95, Math.min(-0.4, Number((-0.4 - (negScore * 0.15)).toFixed(2))));
     } else {
-        themeMap.push({ name: "General Feedback", confidence: 0.75 });
+        sentiment = "NEU";
+        sentimentScore = Number(((posScore - negScore) * 0.1).toFixed(2));
+    }
+
+    // Determine Feature Area
+    let featureArea = "Other";
+    if (lowerText.includes("login") || lowerText.includes("auth") || lowerText.includes("password") || lowerText.includes("signin") || lowerText.includes("sign in") || lowerText.includes("signup") || lowerText.includes("sign up") || lowerText.includes("sso") || lowerText.includes("saml") || lowerText.includes("2fa") || lowerText.includes("mfa") || lowerText.includes("magic link") || lowerText.includes("credentials") || lowerText.includes("session")) {
+        featureArea = "Authentication";
+    } else if (lowerText.includes("payment") || lowerText.includes("payments") || lowerText.includes("billing") || lowerText.includes("invoice") || lowerText.includes("card") || lowerText.includes("stripe") || lowerText.includes("charge") || lowerText.includes("transaction") || lowerText.includes("refund") || lowerText.includes("vat") || lowerText.includes("gateway")) {
+        featureArea = "Payments";
+    } else if (lowerText.includes("checkout") || lowerText.includes("cart") || lowerText.includes("buy") || lowerText.includes("purchase") || lowerText.includes("order") || lowerText.includes("coupon") || lowerText.includes("discount")) {
+        featureArea = "Checkout";
+    } else if (lowerText.includes("support") || lowerText.includes("ticket") || lowerText.includes("agent") || lowerText.includes("rep") || lowerText.includes("customer service") || lowerText.includes("helpdesk") || lowerText.includes("sla")) {
+        featureArea = "Support";
+    } else if (lowerText.includes("mobile") || lowerText.includes("ios") || lowerText.includes("android") || lowerText.includes("iphone") || lowerText.includes("app store") || lowerText.includes("play store") || lowerText.includes("tablet")) {
+        featureArea = "Mobile";
+    } else if (lowerText.includes("dashboard") || lowerText.includes("kpi") || lowerText.includes("chart") || lowerText.includes("graph") || lowerText.includes("metrics") || lowerText.includes("widget") || lowerText.includes("analytics")) {
+        featureArea = "Dashboard";
+    } else if (lowerText.includes("search") || lowerText.includes("filter") || lowerText.includes("lookup") || lowerText.includes("query") || lowerText.includes("find")) {
+        featureArea = "Search";
+    } else if (lowerText.includes("onboard") || lowerText.includes("wizard") || lowerText.includes("tour") || lowerText.includes("getting started") || lowerText.includes("setup") || lowerText.includes("welcome")) {
+        featureArea = "Onboarding";
+    } else if (lowerText.includes("notification") || lowerText.includes("notifications") || lowerText.includes("alert") || lowerText.includes("alerts") || lowerText.includes("email") || lowerText.includes("emails") || lowerText.includes("push")) {
+        featureArea = "Notifications";
+    } else if (lowerText.includes("speed") || lowerText.includes("fast") || lowerText.includes("slow") || lowerText.includes("latency") || lowerText.includes("lag") || lowerText.includes("performance") || lowerText.includes("freeze") || lowerText.includes("load time")) {
+        featureArea = "Performance";
+    }
+
+    // Context-Aware Theme, Issue, Severity, Priority Generation
+    const themeMap = [];
+    let issue = "NONE";
+    let severity = "LOW";
+    let priority = "LOW";
+
+    if (featureArea === "Authentication") {
+        if (sentiment === "POS") {
+            themeMap.push({ name: "Login Experience", confidence: 0.95 });
+            issue = "NONE";
+            severity = "NONE";
+            priority = "LOW";
+        } else if (sentiment === "NEG") {
+            const isPassword = lowerText.includes("password") || lowerText.includes("reset");
+            themeMap.push({ name: "Login Failure", confidence: 0.95 });
+            issue = isPassword ? "Password Reset Failure" : "Authentication Problem";
+            severity = "HIGH";
+            priority = "HIGH";
+        } else {
+            themeMap.push({ name: "Login Experience", confidence: 0.85 });
+            issue = "NONE";
+            severity = "LOW";
+            priority = "LOW";
+        }
+    } else if (featureArea === "Payments") {
+        if (sentiment === "POS") {
+            themeMap.push({ name: "Payment Process", confidence: 0.95 });
+            issue = "NONE";
+            severity = "NONE";
+            priority = "LOW";
+        } else if (sentiment === "NEG") {
+            const isTimeout = lowerText.includes("timeout") || lowerText.includes("timed out") || lowerText.includes("gateway");
+            const isInvoice = lowerText.includes("invoice") || lowerText.includes("vat") || lowerText.includes("bill");
+            themeMap.push({ name: "Payment Failure", confidence: 0.95 });
+            issue = isTimeout ? "Payment Gateway Timeout" : isInvoice ? "Billing & Invoice Error" : "Payment Transaction Failure";
+            severity = "HIGH";
+            priority = "HIGH";
+        } else {
+            themeMap.push({ name: "Payment Process", confidence: 0.85 });
+            issue = "NONE";
+            severity = "LOW";
+            priority = "LOW";
+        }
+    } else if (featureArea === "Checkout") {
+        if (sentiment === "POS") {
+            themeMap.push({ name: "Checkout Experience", confidence: 0.95 });
+            issue = "NONE";
+            severity = "NONE";
+            priority = "LOW";
+        } else if (sentiment === "NEG") {
+            const isPaymentInCheckout = lowerText.includes("pay") || lowerText.includes("card") || lowerText.includes("charge");
+            themeMap.push({ name: isPaymentInCheckout ? "Checkout Payment Failure" : "Checkout Failure", confidence: 0.95 });
+            issue = isPaymentInCheckout ? "Checkout Payment Failure" : "Cart Checkout Error";
+            severity = "HIGH";
+            priority = "HIGH";
+        } else {
+            themeMap.push({ name: "Checkout Experience", confidence: 0.85 });
+            issue = "NONE";
+            severity = "LOW";
+            priority = "LOW";
+        }
+    } else if (featureArea === "Support") {
+        if (sentiment === "POS") {
+            themeMap.push({ name: "Customer Support", confidence: 0.95 });
+            issue = "NONE";
+            severity = "NONE";
+            priority = "LOW";
+        } else if (sentiment === "NEG") {
+            themeMap.push({ name: "Support Ticket SLA", confidence: 0.92 });
+            issue = "Support Response Delay";
+            severity = "MEDIUM";
+            priority = "MEDIUM";
+        } else {
+            themeMap.push({ name: "Customer Support", confidence: 0.85 });
+            issue = "NONE";
+            severity = "LOW";
+            priority = "LOW";
+        }
+    } else if (featureArea === "Mobile") {
+        if (sentiment === "POS") {
+            themeMap.push({ name: "Mobile Experience", confidence: 0.95 });
+            issue = "NONE";
+            severity = "NONE";
+            priority = "LOW";
+        } else if (sentiment === "NEG") {
+            themeMap.push({ name: "App Stability & Crashes", confidence: 0.94 });
+            issue = lowerText.includes("crash") ? "Mobile App Crash" : "Mobile App Freezing";
+            severity = "HIGH";
+            priority = "HIGH";
+        } else {
+            themeMap.push({ name: "Mobile Experience", confidence: 0.85 });
+            issue = "NONE";
+            severity = "LOW";
+            priority = "LOW";
+        }
+    } else if (featureArea === "Dashboard") {
+        if (sentiment === "POS") {
+            themeMap.push({ name: "Dashboard UI", confidence: 0.95 });
+            issue = "NONE";
+            severity = "NONE";
+            priority = "LOW";
+        } else if (sentiment === "NEG") {
+            themeMap.push({ name: "Dashboard Performance", confidence: 0.92 });
+            issue = "Dashboard Rendering Latency";
+            severity = "MEDIUM";
+            priority = "LOW";
+        } else {
+            themeMap.push({ name: "Dashboard UI", confidence: 0.85 });
+            issue = "NONE";
+            severity = "LOW";
+            priority = "LOW";
+        }
+    } else if (featureArea === "Search") {
+        if (sentiment === "POS") {
+            themeMap.push({ name: "Search & Filter Speed", confidence: 0.95 });
+            issue = "NONE";
+            severity = "NONE";
+            priority = "LOW";
+        } else if (sentiment === "NEG") {
+            themeMap.push({ name: "Search Usability", confidence: 0.92 });
+            issue = "Search Query Friction";
+            severity = "MEDIUM";
+            priority = "MEDIUM";
+        } else {
+            themeMap.push({ name: "Search & Filter Speed", confidence: 0.85 });
+            issue = "NONE";
+            severity = "LOW";
+            priority = "LOW";
+        }
+    } else if (featureArea === "Onboarding") {
+        if (sentiment === "POS") {
+            themeMap.push({ name: "Onboarding Experience", confidence: 0.95 });
+            issue = "NONE";
+            severity = "NONE";
+            priority = "LOW";
+        } else if (sentiment === "NEG") {
+            themeMap.push({ name: "Onboarding Friction", confidence: 0.92 });
+            issue = "Setup Wizard Error";
+            severity = "MEDIUM";
+            priority = "MEDIUM";
+        } else {
+            themeMap.push({ name: "Onboarding Experience", confidence: 0.85 });
+            issue = "NONE";
+            severity = "LOW";
+            priority = "LOW";
+        }
+    } else if (featureArea === "Notifications") {
+        if (sentiment === "POS") {
+            themeMap.push({ name: "Notification Delivery", confidence: 0.95 });
+            issue = "NONE";
+            severity = "NONE";
+            priority = "LOW";
+        } else if (sentiment === "NEG") {
+            themeMap.push({ name: "Notification Delay", confidence: 0.92 });
+            issue = "Email Alert Delay";
+            severity = "MEDIUM";
+            priority = "MEDIUM";
+        } else {
+            themeMap.push({ name: "Notification Delivery", confidence: 0.85 });
+            issue = "NONE";
+            severity = "LOW";
+            priority = "LOW";
+        }
+    } else if (featureArea === "Performance") {
+        if (sentiment === "POS") {
+            themeMap.push({ name: "System Performance", confidence: 0.95 });
+            issue = "NONE";
+            severity = "NONE";
+            priority = "LOW";
+        } else if (sentiment === "NEG") {
+            themeMap.push({ name: "Performance Bottleneck", confidence: 0.95 });
+            issue = "Slow System Performance";
+            severity = "HIGH";
+            priority = "HIGH";
+        } else {
+            themeMap.push({ name: "System Performance", confidence: 0.85 });
+            issue = "NONE";
+            severity = "LOW";
+            priority = "LOW";
+        }
+    } else {
+        if (sentiment === "POS") {
+            themeMap.push({ name: "General User Experience", confidence: 0.85 });
+            issue = "NONE";
+            severity = "NONE";
+            priority = "LOW";
+        } else if (sentiment === "NEG") {
+            themeMap.push({ name: "General Usability Issues", confidence: 0.85 });
+            issue = "General Usability Friction";
+            severity = "LOW";
+            priority = "LOW";
+        } else {
+            themeMap.push({ name: "General Feedback", confidence: 0.75 });
+            issue = "NONE";
+            severity = "LOW";
+            priority = "LOW";
+        }
+    }
+
+    let rationale = "";
+    const shortContent = rawText.length > 60 ? rawText.substring(0, 60) + "..." : rawText;
+    if (sentiment === "POS") {
+        rationale = `Positive customer feedback praising ${featureArea.toLowerCase()}: "${shortContent}"`;
+    } else if (sentiment === "NEG") {
+        rationale = `Negative customer feedback reporting ${issue.toLowerCase()} with ${featureArea.toLowerCase()}: "${shortContent}"`;
+    } else {
+        rationale = `Neutral customer feedback regarding ${featureArea.toLowerCase()}: "${shortContent}"`;
     }
 
     return {
@@ -195,6 +494,9 @@ Customer feedback text:
         sentimentScore,
         themes: themeMap,
         featureArea,
+        issue,
+        severity,
+        priority,
         rationale
     };
 }

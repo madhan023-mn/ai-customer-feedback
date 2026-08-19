@@ -279,6 +279,11 @@ function ImportFeedback() {
                                 </div>
                             </div>
 
+                            <div style={{ background: "rgba(99, 102, 241, 0.08)", border: "1px solid rgba(99, 102, 241, 0.2)", borderRadius: "10px", padding: "10px 14px", marginBottom: "1.5rem", display: "flex", alignItems: "center", gap: "8px", fontSize: "0.88rem", color: "#4338ca" }}>
+                                <Sparkles size={16} color="#6366f1" />
+                                <span><strong>Automatic AI Analysis Active:</strong> Newly imported feedback is automatically queued and analyzed by AI in the background.</span>
+                            </div>
+
                             {/* Stat Summary Grid */}
                             <div className="import-stats" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "12px", marginBottom: "1.75rem" }}>
                                 <div style={{ background: "#f8fafc", borderRadius: "var(--radius-md)", padding: "16px", border: "1px solid var(--border-light)" }}>
