@@ -1,11 +1,8 @@
 const bcrypt = require("bcryptjs");
-
 const User = require("../models/User");
 
 async function getMembers(req, res) {
-
     try {
-
         const members = await User
             .find({
                 workspace: req.user.workspace
@@ -18,14 +15,8 @@ async function getMembers(req, res) {
         res.json({
             members
         });
-
     } catch (error) {
-
-        console.error(
-            "Get members error:",
-            error
-        );
-
+        console.error("Get members error:", error);
         res.status(500).json({
             message: "Failed to get members"
         });
@@ -33,9 +24,7 @@ async function getMembers(req, res) {
 }
 
 async function addMember(req, res) {
-
     try {
-
         const {
             name,
             email,
@@ -59,29 +48,30 @@ async function addMember(req, res) {
                 .includes(role)
         ) {
             return res.status(400).json({
-                message: "Invalid role"
+                message: "Invalid role. Allowed roles: ADMIN, ANALYST, VIEWER."
             });
         }
 
+        const normalizedEmail = String(email || "").toLowerCase().trim();
+
         const existingUser = await User.findOne({
-            email
+            email: normalizedEmail
         });
 
         if (existingUser) {
             return res.status(409).json({
-                message: "Email already registered"
+                message: "Email already registered in system"
             });
         }
 
-        const passwordHash =
-            await bcrypt.hash(
-                password,
-                12
-            );
+        const passwordHash = await bcrypt.hash(
+            password,
+            12
+        );
 
         const user = await User.create({
-            name,
-            email,
+            name: name.trim(),
+            email: normalizedEmail,
             passwordHash,
             role,
             workspace: req.user.workspace
@@ -96,25 +86,16 @@ async function addMember(req, res) {
                 workspace: user.workspace
             }
         });
-
     } catch (error) {
-
-        console.error(
-            "Add member error:",
-            error
-        );
-
+        console.error("Add member error:", error);
         res.status(500).json({
             message: "Failed to add member"
         });
     }
 }
 
-
 async function updateMemberRole(req, res) {
-
     try {
-
         const { role } = req.body;
 
         if (
@@ -122,7 +103,7 @@ async function updateMemberRole(req, res) {
                 .includes(role)
         ) {
             return res.status(400).json({
-                message: "Invalid role"
+                message: "Invalid role. Allowed roles: ADMIN, ANALYST, VIEWER."
             });
         }
 
@@ -137,8 +118,19 @@ async function updateMemberRole(req, res) {
             });
         }
 
-        member.role = role;
+        if (member.role === "ADMIN" && role !== "ADMIN") {
+            const adminCount = await User.countDocuments({
+                workspace: req.user.workspace,
+                role: "ADMIN"
+            });
+            if (adminCount <= 1) {
+                return res.status(400).json({
+                    message: "Cannot change role. The workspace must have at least one active ADMIN."
+                });
+            }
+        }
 
+        member.role = role;
         await member.save();
 
         res.json({
@@ -150,25 +142,16 @@ async function updateMemberRole(req, res) {
                 role: member.role
             }
         });
-
     } catch (error) {
-
-        console.error(
-            "Update member role error:",
-            error
-        );
-
+        console.error("Update member role error:", error);
         res.status(500).json({
             message: "Failed to update role"
         });
     }
 }
 
-
 async function deleteMember(req, res) {
-
     try {
-
         const member = await User.findOne({
             _id: req.params.id,
             workspace: req.user.workspace
@@ -189,6 +172,18 @@ async function deleteMember(req, res) {
             });
         }
 
+        if (member.role === "ADMIN") {
+            const adminCount = await User.countDocuments({
+                workspace: req.user.workspace,
+                role: "ADMIN"
+            });
+            if (adminCount <= 1) {
+                return res.status(400).json({
+                    message: "Cannot delete the sole ADMIN member of this workspace."
+                });
+            }
+        }
+
         await User.deleteOne({
             _id: member._id
         });
@@ -196,14 +191,8 @@ async function deleteMember(req, res) {
         res.json({
             message: "Member removed successfully"
         });
-
     } catch (error) {
-
-        console.error(
-            "Delete member error:",
-            error
-        );
-
+        console.error("Delete member error:", error);
         res.status(500).json({
             message: "Failed to remove member"
         });

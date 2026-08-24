@@ -116,6 +116,14 @@ function ImportFeedback() {
         }
     }
 
+    function sanitizeCsvCell(value) {
+        let str = String(value ?? "");
+        if (/^[=+\-@\t\r]/.test(str)) {
+            str = "'" + str;
+        }
+        return `"${str.replace(/"/g, '""')}"`;
+    }
+
     function downloadErrorLog() {
         if (!result || !result.rejectedRows || !result.rejectedRows.length) return;
 
@@ -123,9 +131,9 @@ function ImportFeedback() {
             ["Row Number", "Errors", "Raw Content", "Raw Channel"].join(","),
             ...result.rejectedRows.map(r => [
                 r.rowNumber,
-                `"${(r.errors || []).join("; ")}"`,
-                `"${(r.data?.content || "").replace(/"/g, '""')}"`,
-                `"${r.data?.channel || ""}"`
+                sanitizeCsvCell((r.errors || []).join("; ")),
+                sanitizeCsvCell(r.data?.content || ""),
+                sanitizeCsvCell(r.data?.channel || "")
             ].join(","))
         ].join("\n");
 

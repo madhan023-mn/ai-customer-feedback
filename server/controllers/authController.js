@@ -1,7 +1,7 @@
 const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 const Workspace = require("../models/Workspace");
-const { setAuthCookie } = require("../utils/generateToken");
+const { setAuthCookie, getCookieOptions } = require("../utils/generateToken");
 
 async function register(req, res) {
     try {
@@ -135,7 +135,7 @@ async function me(req, res) {
 }
 
 function logout(req, res) {
-    res.clearCookie("token");
+    res.clearCookie("token", getCookieOptions());
     res.json({
         message: "Logged out successfully"
     });

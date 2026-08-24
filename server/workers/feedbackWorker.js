@@ -4,7 +4,7 @@ const redisConnection = require("../config/redis");
 const connectDB = require("../config/db");
 const Feedback = require("../models/Feedback");
 const { analyzeFeedback } = require("../services/aiService");
-const { processPendingFeedback } = require("../services/feedbackAiProcessor");
+const { processPendingFeedback, processSingleFeedback } = require("../services/feedbackAiProcessor");
 
 async function startWorker() {
     try {
@@ -17,43 +17,18 @@ async function startWorker() {
                 console.log(`Processing job ${job.id}`);
                 const { feedbackId } = job.data;
 
-                const feedback = await Feedback.findById(feedbackId);
-                if (!feedback) {
-                    throw new Error("Feedback not found");
+                if (!feedbackId) {
+                    throw new Error("Missing feedbackId in job payload");
                 }
 
                 await job.updateProgress(25);
+                const updated = await processSingleFeedback(feedbackId, true);
+                await job.updateProgress(100);
 
-                feedback.aiStatus = "PROCESSING";
-                feedback.aiError = null;
-                await feedback.save();
-
-                try {
-                    const result = await analyzeFeedback(feedback);
-                    await job.updateProgress(75);
-
-                    feedback.sentiment = result.sentiment;
-                    feedback.sentimentScore = result.sentimentScore;
-                    feedback.themes = Array.isArray(result.themes) ? result.themes : [result.featureArea];
-                    feedback.featureArea = result.featureArea;
-                    feedback.rationale = result.rationale;
-                    feedback.aiStatus = "COMPLETED";
-                    feedback.aiError = null;
-                    feedback.analyzedAt = new Date();
-
-                    await feedback.save();
-                    await job.updateProgress(100);
-
-                    return {
-                        feedbackId,
-                        status: "COMPLETED"
-                    };
-                } catch (error) {
-                    feedback.aiStatus = "FAILED";
-                    feedback.aiError = error.message;
-                    await feedback.save();
-                    throw error;
-                }
+                return {
+                    feedbackId,
+                    status: updated ? "COMPLETED" : "SKIPPED"
+                };
             },
             {
                 connection: redisConnection,

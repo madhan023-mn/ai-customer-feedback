@@ -147,15 +147,9 @@ function Dashboard() {
         ? data.channelStats.map(item => ({ name: item._id, count: item.count }))
         : Object.keys(data?.channels || {}).map(key => ({ name: key, count: data.channels[key] }));
 
-    const trendData = Array.isArray(data?.feedbackTrend) && data.feedbackTrend.length > 0
+    const trendData = Array.isArray(data?.feedbackTrend)
         ? data.feedbackTrend.map(item => ({ date: item._id, volume: item.count }))
-        : [
-            { date: "Day 1", volume: 12 },
-            { date: "Day 2", volume: 19 },
-            { date: "Day 3", volume: 24 },
-            { date: "Day 4", volume: 32 },
-            { date: "Day 5", volume: 38 }
-        ];
+        : [];
 
     const maxThemeCount = topThemes.length > 0 ? Math.max(...topThemes.map(t => t.count)) : 1;
 
@@ -275,21 +269,27 @@ function Dashboard() {
                         <span>Volume Over Time</span>
                     </h3>
                     <div style={{ width: "100%", height: 230 }}>
-                        <ResponsiveContainer>
-                            <AreaChart data={trendData}>
-                                <defs>
-                                    <linearGradient id="colorVol" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#6d5dfc" stopOpacity={0.4}/>
-                                        <stop offset="95%" stopColor="#6d5dfc" stopOpacity={0}/>
-                                    </linearGradient>
-                                </defs>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                                <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                                <Tooltip />
-                                <Area type="monotone" dataKey="volume" stroke="#6d5dfc" strokeWidth={2} fillOpacity={1} fill="url(#colorVol)" />
-                            </AreaChart>
-                        </ResponsiveContainer>
+                        {trendData.length === 0 ? (
+                            <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)", fontSize: "0.9rem" }}>
+                                No volume trend activity recorded yet.
+                            </div>
+                        ) : (
+                            <ResponsiveContainer>
+                                <AreaChart data={trendData}>
+                                    <defs>
+                                        <linearGradient id="colorVol" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#6d5dfc" stopOpacity={0.4}/>
+                                            <stop offset="95%" stopColor="#6d5dfc" stopOpacity={0}/>
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                                    <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                                    <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                                    <Tooltip />
+                                    <Area type="monotone" dataKey="volume" stroke="#6d5dfc" strokeWidth={2} fillOpacity={1} fill="url(#colorVol)" />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        )}
                     </div>
                 </div>
 

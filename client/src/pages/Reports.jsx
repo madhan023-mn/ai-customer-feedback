@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import api from "../services/api";
+import { useAuth } from "../context/useAuth";
 import {
     FileText,
     Calendar,
@@ -15,10 +16,13 @@ import {
     CheckCircle2,
     Quote,
     FolderArchive,
-    Eye
+    Eye,
+    ShieldAlert
 } from "lucide-react";
 
 function Reports() {
+    const { user } = useAuth();
+    const isViewer = user?.role === "VIEWER";
     const [from, setFrom] = useState("");
     const [to, setTo] = useState("");
     const [report, setReport] = useState(null);
@@ -145,13 +149,19 @@ function Reports() {
                 <button
                     className="btn-primary"
                     onClick={generateVoCReport}
-                    disabled={loading}
-                    style={{ height: "42px", padding: "0 24px", display: "inline-flex", alignItems: "center", gap: "8px" }}
+                    disabled={loading || isViewer}
+                    title={isViewer ? "Viewer role cannot generate new reports. Contact an Admin/Analyst." : ""}
+                    style={{ height: "42px", padding: "0 24px", display: "inline-flex", alignItems: "center", gap: "8px", opacity: isViewer ? 0.6 : 1, cursor: isViewer ? "not-allowed" : "pointer" }}
                 >
                     {loading ? (
                         <>
                             <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} />
                             <span>Generating VoC Report...</span>
+                        </>
+                    ) : isViewer ? (
+                        <>
+                            <ShieldAlert size={16} />
+                            <span>Read-Only Access</span>
                         </>
                     ) : (
                         <>

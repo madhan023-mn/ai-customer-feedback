@@ -1,7 +1,6 @@
 const { z } = require("zod");
 
 const feedbackSchema = z.object({
-
     content: z
         .string()
         .trim()
@@ -29,6 +28,26 @@ const feedbackSchema = z.object({
         .string()
         .trim()
         .max(200)
+        .optional(),
+
+    sentiment: z
+        .enum(["POS", "NEU", "NEG"])
+        .optional(),
+
+    sentimentScore: z
+        .number()
+        .min(-1)
+        .max(1)
+        .optional(),
+
+    status: z
+        .enum(["NEW", "REVIEWED", "ACTIONED", "RESOLVED", "ARCHIVED"])
+        .optional(),
+
+    rationale: z
+        .string()
+        .trim()
+        .max(2000)
         .optional()
 });
 

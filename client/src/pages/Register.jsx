@@ -141,7 +141,7 @@ function Register() {
 
                 <div className="auth-footer">
                     Already have a workspace?{" "}
-                    <Link to="/">Sign In</Link>
+                    <Link to="/login">Sign In</Link>
                 </div>
             </div>
         </div>

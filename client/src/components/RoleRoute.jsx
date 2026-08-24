@@ -1,24 +1,28 @@
 import React from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
+import LoadingScreen from "./LoadingScreen";
 
 function RoleRoute({ allowedRoles, children }) {
     const { user, loading } = useAuth();
+    const location = useLocation();
 
     if (loading) {
         return (
-            <div className="loading-spinner" style={{ minHeight: "50vh" }}>
-                <span>Loading permissions...</span>
-            </div>
+            <LoadingScreen
+                title="Checking Access Permissions..."
+                subtitle="Verifying organizational role clearance"
+                minHeight="50vh"
+            />
         );
     }
 
     if (!user) {
-        return <Navigate to="/" replace />;
+        return <Navigate to="/login" state={{ from: location }} replace />;
     }
 
     if (!allowedRoles.includes(user.role)) {
-        return <Navigate to="/dashboard" replace />;
+        return <Navigate to="/403" replace />;
     }
 
     return children;

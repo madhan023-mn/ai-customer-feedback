@@ -582,14 +582,18 @@ function extractQueryIntent(query) {
 }
 
 function computeCosineSimilarity(vecA, vecB) {
-    if (!vecA || !vecB || vecA.length === 0 || vecB.length === 0) return 0;
+    if (!vecA || !vecB || !Array.isArray(vecA) || !Array.isArray(vecB) || vecA.length === 0 || vecB.length === 0) return 0;
     const len = Math.min(vecA.length, vecB.length);
     let dotProduct = 0;
     let normA = 0;
     let normB = 0;
     for (let i = 0; i < len; i++) {
         dotProduct += vecA[i] * vecB[i];
+    }
+    for (let i = 0; i < vecA.length; i++) {
         normA += vecA[i] * vecA[i];
+    }
+    for (let i = 0; i < vecB.length; i++) {
         normB += vecB[i] * vecB[i];
     }
     if (normA === 0 || normB === 0) return 0;
@@ -868,6 +872,127 @@ Generate a structured executive report JSON matching this exact structure:
     };
 }
 
+async function generateInsight(statistics) {
+    const theme = statistics?.theme || "General";
+    const totalFeedback = Number(statistics?.totalFeedback) || 0;
+    const positive = Number(statistics?.positive) || 0;
+    const neutral = Number(statistics?.neutral) || 0;
+    const negative = Number(statistics?.negative) || 0;
+    const negRate = typeof statistics?.negativePercentage !== "undefined"
+        ? Number(statistics.negativePercentage)
+        : (totalFeedback > 0 ? (negative / totalFeedback) * 100 : 0);
+    const trendDirection = statistics?.trendDirection || "STABLE";
+    const examples = Array.isArray(statistics?.examples) ? statistics.examples.slice(0, 5) : [];
+
+    const { geminiKey, openaiKey } = getApiKey();
+
+    const promptText = `You are an expert customer feedback intelligence AI.
+Analyze the following theme performance statistics and customer verbatim examples to generate a structured product insight.
+
+Theme Name: ${theme}
+Total Feedback Items: ${totalFeedback}
+Positive Feedback Count: ${positive}
+Neutral Feedback Count: ${neutral}
+Negative Feedback Count: ${negative}
+Negative Feedback Rate: ${negRate.toFixed(1)}%
+Trend Direction: ${trendDirection}
+Customer Examples:
+${examples.length > 0 ? examples.map((e, idx) => `[${idx + 1}] "${e}"`).join("\n") : "No specific verbatim examples provided."}
+
+Return ONLY a JSON object with this exact schema:
+{
+    "title": "Concise, descriptive insight title (under 80 characters)",
+    "summary": "2-3 sentence executive summary explaining the core user pain point, praise, or friction",
+    "recommendation": "1-2 actionable, concrete product or engineering recommendations",
+    "severity": "HIGH" | "MEDIUM" | "LOW" | "CRITICAL",
+    "priority": "HIGH" | "MEDIUM" | "LOW" | "CRITICAL"
+}`;
+
+    if (geminiKey) {
+        try {
+            const genAI = new GoogleGenerativeAI(geminiKey);
+            const modelName = process.env.GEMINI_MODEL || "gemini-1.5-flash";
+            const model = genAI.getGenerativeModel({ model: modelName });
+            const result = await model.generateContent(promptText);
+            const text = result.response.text();
+            const match = text.match(/\{[\s\S]*\}/);
+            if (match) {
+                const parsed = JSON.parse(match[0]);
+                const severity = ["CRITICAL", "HIGH", "MEDIUM", "LOW"].includes(parsed.severity)
+                    ? parsed.severity
+                    : (negRate >= 40 ? "HIGH" : negRate >= 20 ? "MEDIUM" : "LOW");
+                return {
+                    title: parsed.title || `${theme} Friction and Improvement Opportunities`,
+                    summary: parsed.summary || `Analysis for ${theme} shows ${negRate.toFixed(1)}% negative feedback across ${totalFeedback} records.`,
+                    recommendation: parsed.recommendation || `Investigate ${theme} workflow and resolve recurring friction points.`,
+                    severity,
+                    priority: parsed.priority || severity
+                };
+            }
+        } catch (e) {
+            console.warn("Gemini Insight generation error, using fallback:", e.message);
+        }
+    }
+
+    if (openaiKey) {
+        try {
+            const client = new OpenAI({ apiKey: openaiKey });
+            const res = await client.chat.completions.create({
+                model: process.env.OPENAI_MODEL || "gpt-3.5-turbo",
+                messages: [{ role: "user", content: promptText }]
+            });
+            const text = res.choices[0]?.message?.content || "";
+            const match = text.match(/\{[\s\S]*\}/);
+            if (match) {
+                const parsed = JSON.parse(match[0]);
+                const severity = ["CRITICAL", "HIGH", "MEDIUM", "LOW"].includes(parsed.severity)
+                    ? parsed.severity
+                    : (negRate >= 40 ? "HIGH" : negRate >= 20 ? "MEDIUM" : "LOW");
+                return {
+                    title: parsed.title || `${theme} Feedback Analysis`,
+                    summary: parsed.summary || `Analysis for ${theme} indicates ${negRate.toFixed(1)}% negative feedback across ${totalFeedback} records.`,
+                    recommendation: parsed.recommendation || `Audit ${theme} user journey and optimize performance.`,
+                    severity,
+                    priority: parsed.priority || severity
+                };
+            }
+        } catch (e) {
+            console.warn("OpenAI Insight generation error, using fallback:", e.message);
+        }
+    }
+
+    // Intelligent Rule-Based Fallback Generator
+    const isHighRisk = negRate >= 45 || (negRate >= 30 && trendDirection === "INCREASING");
+    const isMediumRisk = negRate >= 25;
+    const severity = isHighRisk ? "HIGH" : isMediumRisk ? "MEDIUM" : "LOW";
+
+    let title = `${theme} Customer Experience Overview`;
+    let summary = `Analysis of ${totalFeedback} customer feedback records for ${theme} shows ${positive} positive, ${neutral} neutral, and ${negative} negative submissions (${negRate.toFixed(1)}% negative rate).`;
+    let recommendation = `Continuously monitor ${theme} metrics and gather targeted customer follow-up responses.`;
+
+    if (isHighRisk) {
+        title = `Elevated user friction and complaints in ${theme}`;
+        summary = `High concentration of critical user friction detected in ${theme}. Negative feedback represents ${negRate.toFixed(1)}% of total volume with an ${trendDirection.toLowerCase()} trend.`;
+        recommendation = `Prioritize immediate engineering investigation and UX workflow audit for ${theme} to reduce churn.`;
+    } else if (isMediumRisk) {
+        title = `Moderate usability friction reported in ${theme}`;
+        summary = `Customers report recurring usability pain points in ${theme}, accounting for ${negRate.toFixed(1)}% negative sentiment.`;
+        recommendation = `Refine user onboarding cues and streamline error handling across the ${theme} interface.`;
+    } else if (positive > negative && totalFeedback > 0) {
+        title = `Strong positive customer satisfaction in ${theme}`;
+        summary = `Customers express high satisfaction with ${theme}, with positive sentiment reaching ${(totalFeedback ? (positive / totalFeedback) * 100 : 0).toFixed(1)}%.`;
+        recommendation = `Document successful UX patterns in ${theme} and maintain existing performance SLAs.`;
+    }
+
+    return {
+        title,
+        summary,
+        recommendation,
+        severity,
+        priority: severity
+    };
+}
+
 module.exports = {
     analyzeFeedback,
     answerQuestionWithContext,
@@ -875,6 +1000,7 @@ module.exports = {
     computeCosineSimilarity,
     performVectorSearch,
     generateVoCNarrative,
+    generateInsight,
     ALLOWED_SENTIMENTS,
     ALLOWED_FEATURE_AREAS
 };

@@ -21,6 +21,7 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const Forbidden = lazy(() => import("./pages/Forbidden"));
 
 import ProtectedRoute from "./components/ProtectedRoute";
+import RoleRoute from "./components/RoleRoute";
 import Navbar from "./components/Navbar";
 import LoadingScreen from "./components/LoadingScreen";
 
@@ -95,9 +96,11 @@ function App() {
                         path="/feedback/add"
                         element={
                             <ProtectedRoute>
-                                <AppLayout>
-                                    <AddFeedback />
-                                </AppLayout>
+                                <RoleRoute allowedRoles={["ADMIN", "ANALYST"]}>
+                                    <AppLayout>
+                                        <AddFeedback />
+                                    </AppLayout>
+                                </RoleRoute>
                             </ProtectedRoute>
                         }
                     />
@@ -106,9 +109,11 @@ function App() {
                         path="/feedback/new"
                         element={
                             <ProtectedRoute>
-                                <AppLayout>
-                                    <AddFeedback />
-                                </AppLayout>
+                                <RoleRoute allowedRoles={["ADMIN", "ANALYST"]}>
+                                    <AppLayout>
+                                        <AddFeedback />
+                                    </AppLayout>
+                                </RoleRoute>
                             </ProtectedRoute>
                         }
                     />
@@ -117,9 +122,11 @@ function App() {
                         path="/feedback/import"
                         element={
                             <ProtectedRoute>
-                                <AppLayout>
-                                    <ImportFeedback />
-                                </AppLayout>
+                                <RoleRoute allowedRoles={["ADMIN", "ANALYST"]}>
+                                    <AppLayout>
+                                        <ImportFeedback />
+                                    </AppLayout>
+                                </RoleRoute>
                             </ProtectedRoute>
                         }
                     />
@@ -205,9 +212,11 @@ function App() {
                         path="/members"
                         element={
                             <ProtectedRoute>
-                                <AppLayout>
-                                    <Members />
-                                </AppLayout>
+                                <RoleRoute allowedRoles={["ADMIN"]}>
+                                    <AppLayout>
+                                        <Members />
+                                    </AppLayout>
+                                </RoleRoute>
                             </ProtectedRoute>
                         }
                     />

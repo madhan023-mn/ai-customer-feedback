@@ -1,5 +1,6 @@
 const FEATURE_AREAS = [
     "Checkout",
+    "Onboarding",
     "Dashboard",
     "Mobile",
     "Search",

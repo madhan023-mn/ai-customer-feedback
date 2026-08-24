@@ -13,6 +13,10 @@ const { importFeedbackCSV } = require("./importController");
 const aiResultSchema =
     require("../validators/aiValidator");
 
+function escapeRegex(string) {
+    return String(string || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 // Create single feedback item
 async function createFeedback(req, res) {
     try {
@@ -110,7 +114,7 @@ async function getFeedbacks(req, res) {
         }
 
         if (search && search.trim()) {
-            const searchRegex = new RegExp(search.trim(), "i");
+            const searchRegex = new RegExp(escapeRegex(search.trim()), "i");
             query.$or = [
                 { content: searchRegex },
                 { customerLabel: searchRegex },
