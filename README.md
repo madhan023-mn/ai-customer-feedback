@@ -1,250 +1,365 @@
 # 🔄 Project LOOP — AI Customer-Feedback Intelligence Platform
 
-> **Zidio Development Internship Capstone Project Brief & Specification**  
-> **Repository:** [https://github.com/madhan023-mn/ai-customer-feedback.git](https://github.com/madhan023-mn/ai-customer-feedback.git)  
+> **Zidio Development Internship Capstone Project Final Submission**  
+> **Repository:** [https://github.com/madhan023-mn/ai-customer-feedback](https://github.com/madhan023-mn/ai-customer-feedback)  
+> **Live URL:** [https://ai-customer-feedback.vercel.app](https://ai-customer-feedback.vercel.app)  
 > **Product Slogan:** *"Close the loop on customer feedback."*  
-> **Stack:** MERN Stack (MongoDB, Express.js, React 18 + Vite, Node.js) + Vector Embeddings + RAG Grounding + PDFKit + Recharts
+> **Stack:** MERN Stack (MongoDB, Express.js 5, React 18 + Vite, Node.js 18+) + Vector Embeddings + BullMQ + PDFKit + Recharts  
 
 ---
 
-## 🌟 01 Project Overview & Business Problem
-
-Every product company is drowning in customer feedback arriving from support tickets, app store reviews, NPS/CSAT surveys, sales notes, and community channels.
-
-**Project LOOP** transforms scattered feedback into a ranked, evidence-backed list of what to build, fix, and improve next:
-- Ingests feedback from multiple channels (single entry, universal CSV importer, simulated channel feeds).
-- Uses AI to classify sentiment (`POS`, `NEU`, `NEG`), calculate sentiment scores ($-1.0 \dots 1.0$), map feature areas, and extract themes with confidence scores.
-- Clusters feedback into named themes, tracking volume trends and period-over-period spike detection (+68% alert threshold).
-- **Ask LOOP (Retrieval-Augmented Generation / RAG)**: Plain-English semantic vector search grounded strictly in retrieved feedback with source citations.
-- **Voice-of-Customer (VoC) Reports**: Generates automated executive digests with pre-computed metrics, notable verbatim quotes, and recommended product actions, exportable as downloadable PDFs.
-
----
-
-## 🏢 02 System Architecture
-
-```
-                      ┌────────────────────────────────────────┐
-                      │          React 18 + Vite Client        │
-                      │  (Dashboard, Inbox, Themes, Ask, VoC)  │
-                      └───────────────────┬────────────────────┘
-                                          │ (REST API + JWT)
-                                          ▼
-                      ┌────────────────────────────────────────┐
-                      │        Node.js / Express API Layer     │
-                      │  (Auth, RBAC Guards, Tenant Isolation) │
-                      └───────┬───────────┬────────────┬───────┘
-                              │           │            │
-             ┌────────────────┘           │            └────────────────┐
-             ▼                            ▼                             ▼
-   ┌───────────────────┐        ┌───────────────────┐        ┌─────────────────────┐
-   │     MongoDB       │        │  Redis + BullMQ   │        │  AI Services & RAG  │
-   │  (Multi-Tenant    │        │  (Async Queue &   │        │ (Claude/Gemini/OAI  │
-   │  Collections &    │        │  Fault-Tolerant   │        │  Dense Embeddings & │
-   │  Vector Storage)  │        │  Sync Fallback)   │        │  Grounded Answers)  │
-   └───────────────────┘        └───────────────────┘        └─────────────────────┘
-```
-
-### 🔒 Non-Negotiable Security & Multi-Tenant Isolation
-Every query touching `Feedback`, `Theme`, `FeedbackTheme`, `Embedding`, `Report`, or `User` is filtered by the caller's authenticated `workspaceId` (`req.user.workspace`). Cross-tenant access is strictly blocked at the API layer.
+## 📑 Table of Contents
+1. [Project Overview](#1-project-overview)
+2. [Problem Statement](#2-problem-statement)
+3. [Key Features](#3-key-features)
+4. [Tech Stack](#4-tech-stack)
+5. [System Architecture](#5-system-architecture)
+6. [Application Screenshots](#6-application-screenshots)
+7. [Demo Credentials](#7-demo-credentials)
+8. [Installation & Setup](#8-installation--setup)
+9. [Environment Variables](#9-environment-variables)
+10. [API Overview](#10-api-overview)
+11. [Deployment](#11-deployment)
+12. [Project Structure](#12-project-structure)
+13. [Challenges & Solutions](#13-challenges--solutions)
+14. [Future Enhancements](#14-future-enhancements)
+15. [Conclusion](#15-conclusion)
 
 ---
 
-## 🔐 03 Demo Login Credentials (RBAC)
+## 1. Project Overview
 
-Graders and mentors can evaluate all three roles using the pre-seeded demo workspace (**Acme Corp**):
+**Project LOOP** is an enterprise-grade AI customer-feedback intelligence platform that unifies scattered customer signals into a ranked, evidence-backed product action plan. Modern companies receive feedback across Zendesk support tickets, App Store reviews, post-purchase NPS/CSAT surveys, sales discovery notes, and community channels. Project LOOP ingests, classifies, clusters, and analyzes this high-volume unstructured feedback in real-time.
 
-| Role | Email | Password | Permissions & Capabilities |
-| :--- | :--- | :--- | :--- |
-| **ADMIN** | `admin@acme.com` | `password123` | Full access: Feedback CRUD, CSV Bulk Import, User & Role Management, VoC Reports |
-| **ANALYST** | `analyst@acme.com` | `password123` | Ingest feedback, trigger AI classification, explore Themes & Trends, Ask LOOP RAG, generate VoC reports |
-| **VIEWER** | `viewer@acme.com` | `password123` | Read-only access to Analytics Dashboard, Feedback Inbox, Theme Explorer, and Reports |
+By combining modern full-stack MERN engineering with dense vector embeddings and Large Language Models, Project LOOP empowers product managers, engineers, and executives to understand customer sentiment shifts instantly and make confident, data-driven roadmap decisions.
 
 ---
 
-## 📊 04 Data Model & Entity Relationships
+## 2. Problem Statement
 
-```mermaid
-erDiagram
-    Workspace ||--o{ User : "has many"
-    Workspace ||--o{ Feedback : "has many"
-    Workspace ||--o{ Theme : "has many"
-    Workspace ||--o{ Report : "has many"
-    User ||--o{ Report : "generates"
-    Feedback ||--o{ FeedbackTheme : "has many"
-    Theme ||--o{ FeedbackTheme : "has many"
-    Feedback ||--|| Embedding : "has one"
+Digital product teams face three critical bottlenecks when handling user feedback:
+1. **Information Fragmentation:** Feedback is siloed across customer support, app stores, community forums, and sales notes without a single source of truth.
+2. **Manual Triage Bottlenecks:** Human sentiment analysis and tagging cannot scale as user bases grow, resulting in delayed bug detection and missed churn signals.
+3. **Subjective Prioritization:** Feature roadmaps are often influenced by the loudest anecdotal voices rather than quantifiable, evidence-backed customer pain points.
 
-    Workspace {
-        ObjectId id PK
-        string name
-        date createdAt
-    }
-    User {
-        ObjectId id PK
-        string name
-        string email
-        string passwordHash
-        string role "ADMIN | ANALYST | VIEWER"
-        ObjectId workspace FK
-    }
-    Feedback {
-        ObjectId id PK
-        string content
-        string channel "SUPPORT_TICKET | APP_STORE | NPS_SURVEY | SALES_CALL | COMMUNITY | etc."
-        string customerLabel
-        string sourceRef
-        string sentiment "POS | NEU | NEG"
-        number sentimentScore "-1.0 to 1.0"
-        string featureArea
-        string rationale
-        string status "NEW | REVIEWED | ACTIONED"
-        string aiStatus "PENDING | PROCESSING | COMPLETED | FAILED"
-        ObjectId workspace FK
-        date createdAt
-    }
-    Theme {
-        ObjectId id PK
-        string name
-        string description
-        string color
-        ObjectId workspace FK
-    }
-    FeedbackTheme {
-        ObjectId id PK
-        ObjectId feedback FK
-        ObjectId theme FK
-        number confidence "0.0 to 1.0"
-        ObjectId workspace FK
-    }
-    Embedding {
-        ObjectId id PK
-        ObjectId feedback FK
-        array vector "[Number] (64-dim float array)"
-        ObjectId workspace FK
-    }
-    Report {
-        ObjectId id PK
-        string title
-        date periodStart
-        date periodEnd
-        object contentJson
-        ObjectId generatedBy FK
-        ObjectId workspace FK
-        date createdAt
-    }
-```
+**Project LOOP** solves this by automating multi-channel ingestion, structured AI classification, automated spike detection, plain-English vector Q&A (**Ask LOOP**), and one-click **Voice-of-Customer (VoC)** executive reporting.
 
 ---
 
-## 🚀 05 Feature Checklist (Zidio Rubric Mapping)
+## 3. Key Features
 
-### 📌 Core Features (C1–C5)
-- [x] **C1: Authentication & Workspaces**: Sign-up creates User and Workspace (creator = `ADMIN`); bcrypt password hashing; JWT session persistence; protected routes.
-- [x] **C2: Role-Based Access Control**: Server-side 403 enforcement for `ADMIN`, `ANALYST`, and `VIEWER` on mutations.
-- [x] **C3: Feedback Ingestion**: Single manual entry form, universal CSV bulk importer with error reporting, and 5 simulated channel integration buttons.
-- [x] **C4: Feedback Inbox**: Server-side pagination, full-text search, date-range picker (`fromDate` / `toDate`), multi-param filters (channel, sentiment, theme, status), inline status workflow (`NEW` $\rightarrow$ `REVIEWED` $\rightarrow$ `ACTIONED`), and saved view quick presets.
-- [x] **C5: Analytics Dashboard**: 3+ Recharts visual charts (Volume Over Time Area Chart, Sentiment Breakdown Donut Chart, Top Themes Ranking Bar Chart, Channel Distribution Chart), stat KPI cards, and negativity spike alert banner.
+### 📌 Core Platform Features (C1–C5)
+- **C1: Authentication & Workspace Isolation:** Secure sign-up/login with bcrypt password hashing, stateless JWT session handling, and strict multi-tenant database isolation.
+- **C2: 3-Tier Role-Based Access Control (RBAC):** Server-side route guarding and fine-grained permissions for `ADMIN`, `ANALYST`, and `VIEWER` roles.
+- **C3: Flexible Ingestion Pipeline:** Single manual feedback logging, universal streaming CSV importer with automatic column mapping, and simulated live channel webhooks (App Store, Zendesk, NPS, Sales Calls, Community).
+- **C4: Interactive Feedback Inbox:** Server-side pagination, full-text keyword search, multi-parameter filters (channel, sentiment, theme, status), saved view quick presets, and inline status workflow (`NEW` $\rightarrow$ `REVIEWED` $\rightarrow$ `ACTIONED`).
+- **C5: Executive Analytics Dashboard:** Interactive Recharts data visualizations (30-day Volume Over Time area chart, Sentiment Breakdown donut chart, Top Themes ranking bar chart, Channel distribution), real-time KPI metrics, and a dynamic Negativity Spike Alert banner.
 
 ### 🤖 AI Intelligence Features (AI1–AI4)
-- [x] **AI1: Auto-Classification**: Structured output (sentiment, sentiment score $-1..1$, themes with confidence scores $0..1$, feature-area label, one-line rationale). Stored on the record; includes manual re-classify action.
-- [x] **AI2: Theme Clustering & Trends**: Dynamic theme grouping, period-over-period volume comparisons, spike detection alerts (+68% threshold flag 🔥), and interactive drill-down into underlying feedback.
-- [x] **AI3: Ask LOOP (Retrieval-Augmented Generation / RAG)**: Plain-English semantic vector Q&A using Cosine Similarity over `Embedding` vectors; answers grounded strictly in retrieved context with cited feedback source cards.
-- [x] **AI4: Voice-of-Customer (VoC) Reports**: One-click weekly/monthly executive digest generator; pre-computes statistics in code to prevent hallucination; produces executive narrative with verbatim customer quotes and recommended actions; saves to MongoDB and exports downloadable PDFs.
-
-### 🎯 Stretch Goals
-- [x] **Saved Views / Segment Presets**: Quick inbox filters (*All Feedback, Negative Complaints, Payment Blockers, Mobile Experience, Positive Praise, Untriaged*).
-- [x] **Sentiment Trend Alerts**: Prominent dashboard banner when negative feedback exceeds threshold.
-- [x] **Offline Redis Fault Tolerance**: Automatic synchronous fallback processing if Redis queue is offline.
+- **AI1: Real-Time Structured Auto-Classification:** Extracts sentiment category (`POS`, `NEU`, `NEG`), granular float sentiment score ($-1.0 \dots 1.0$), product feature area, multi-theme confidence tags ($0.0 \dots 1.0$), and a one-sentence rationale.
+- **AI2: Theme Clustering & Trend Spike Alerts:** Dynamic theme grouping with rolling 7-day period-over-period growth tracking and automatic **Spike Detection (🔥)** when negative complaints surge past the $+68\%$ alert threshold.
+- **AI3: Ask LOOP (Retrieval-Augmented Generation / RAG):** Natural language Q&A powered by 64-dimensional dense vector embeddings and Cosine Similarity in MongoDB; answers are strictly grounded in retrieved feedback and include source citation cards.
+- **AI4: Voice-of-Customer (VoC) Executive Digests & PDF Export:** One-click weekly/monthly summary generation; pre-computes hard statistical aggregations in code to eliminate hallucinations, generates executive narratives with notable verbatim quotes, and exports formatted PDF reports via `PDFKit`.
 
 ---
 
-## 💻 06 Installation & Local Setup
+## 4. Tech Stack
+
+| Layer | Technology | Version | Purpose & Architectural Role |
+| :--- | :--- | :--- | :--- |
+| **Frontend UI** | **React.js** | `18.3.1` | Declarative, component-based user interface |
+| **Build System** | **Vite** | `8.2.1` | Ultra-fast HMR and optimized production bundling |
+| **Styling** | **Vanilla CSS + Glassmorphism** | Modern CSS3 | Custom dark theme, CSS variables, responsive design |
+| **Charts** | **Recharts** | `2.15.1` | Interactive Volume Over Time, Donut, and Bar charts |
+| **Icons** | **Lucide React** | `1.16.0` | Clean SVG icon system |
+| **Backend Runtime** | **Node.js** | `18+ LTS` | High-throughput asynchronous runtime |
+| **API Framework** | **Express.js** | `5.2.1` | REST API routing, controllers, and security middleware |
+| **Database** | **MongoDB Atlas / Mongoose** | `9.9.1` | Multi-tenant document database & vector storage |
+| **Queue / Worker** | **BullMQ + ioredis** | `6.1.1` | Asynchronous task queue with automated synchronous fallback |
+| **AI LLM API** | **Google Gemini / OpenAI** | Official SDKs | Sentiment analysis, feature mapping, and RAG synthesis |
+| **Vector Engine** | **Cosine Similarity Engine** | Custom | Normalized dense float vector matching |
+| **PDF Generation** | **PDFKit** | `0.19.1` | Server-side binary PDF generation for VoC reports |
+| **CSV Engine** | **csv-parse / json2csv** | `7.0.2` | High-speed streaming CSV parsing |
+| **Validation** | **Zod** | `4.4.3` | Request payload schema validation and sanitization |
+| **Authentication** | **jsonwebtoken + bcryptjs** | `9.0.3` | Stateless JWT tokens and cryptographic password hashing |
+
+---
+
+## 5. System Architecture
+
+```
+                       ┌────────────────────────────────────────┐
+                       │          React 18 + Vite Client        │
+                       │  (Dashboard, Inbox, Themes, Ask, VoC)  │
+                       └───────────────────┬────────────────────┘
+                                           │ (REST API + JWT)
+                                           ▼
+                       ┌────────────────────────────────────────┐
+                       │        Node.js / Express API Layer     │
+                       │  (Auth, RBAC Guards, Tenant Isolation) │
+                       └───────┬───────────┬────────────┬───────┘
+                               │           │            │
+              ┌────────────────┘           │            └────────────────┐
+              ▼                            ▼                             ▼
+    ┌───────────────────┐        ┌───────────────────┐        ┌─────────────────────┐
+    │     MongoDB       │        │  Redis + BullMQ   │        │  AI Services & RAG  │
+    │  (Multi-Tenant    │        │  (Async Queue &   │        │ (Gemini/OAI Models, │
+    │  Collections &    │        │  Fault-Tolerant   │        │  Dense Embeddings & │
+    │  Vector Storage)  │        │  Sync Fallback)   │        │  Grounded Answers)  │
+    └───────────────────┘        └───────────────────┘        └─────────────────────┘
+```
+
+---
+
+## 6. Application Screenshots
+
+### 📊 1. Executive Analytics Dashboard
+*Real-time KPI metrics, 30-day feedback volume area chart, AI sentiment donut chart, top themes breakdown, and active Negativity Spike alert banner.*
+![Analytics Dashboard](assets/screenshots/dashboard.svg)
+
+---
+
+### 📥 2. Feedback Inbox & Triage Workflow
+*Multi-parameter search, date range pickers, status progression (`NEW` $\rightarrow$ `REVIEWED` $\rightarrow$ `ACTIONED`), and one-click saved view presets.*
+![Feedback Inbox](assets/screenshots/feedback_inbox.svg)
+
+---
+
+### 🤖 3. Real-Time AI Auto-Classification
+*Structured extraction of sentiment score, product feature area, multi-theme confidence weights, and single-sentence AI rationale.*
+![AI Analysis](assets/screenshots/ai_analysis.svg)
+
+---
+
+### 📈 4. Dynamic Theme Explorer & Spike Detection
+*Period-over-period volume comparison (current 7 days vs previous 7 days) with automated $+68\%$ spike detection badges and drill-down views.*
+![Theme Explorer](assets/screenshots/theme_explorer.svg)
+
+---
+
+### 🔍 5. Ask LOOP (Vector-Grounded RAG Q&A)
+*Plain-English natural language querying backed by 64-dimensional vector similarity in MongoDB, strict anti-hallucination grounding, and cited source cards.*
+![Ask LOOP](assets/screenshots/ask_loop.svg)
+
+---
+
+### 📄 6. Voice-of-Customer (VoC) Reports & PDF Export
+*Executive digest generation with pre-computed statistics, customer sentiment overview, notable verbatim quotes, and one-click downloadable PDFKit reports.*
+![VoC Reports](assets/screenshots/voc_reports.svg)
+
+---
+
+### 🔐 7. Multi-Tenant Login & Role-Based Access Control
+*Secure authentication modal demonstrating isolated workspace access and pre-seeded RBAC roles.*
+![Login and RBAC](assets/screenshots/rbac_login.svg)
+
+---
+
+## 7. Demo Credentials
+
+The platform includes a pre-seeded, isolated demo workspace (**Acme Corp**) with 125+ pre-classified feedback items for evaluator testing:
+
+| Role | Demo Email | Demo Password | Capabilities & Access Level |
+| :--- | :--- | :--- | :--- |
+| **ADMIN** | `admin@acme.com` | `password123` | **Full Access:** Ingest feedback, bulk CSV import, user/role management, VoC reports |
+| **ANALYST** | `analyst@acme.com` | `password123` | **Operational Access:** Ingest feedback, trigger AI classification, theme trends, Ask LOOP, VoC reports |
+| **VIEWER** | `viewer@acme.com` | `password123` | **Read-Only:** View analytics dashboard, feedback inbox, themes, and report downloads |
+
+> *Note: The above credentials are mock demo accounts populated strictly for evaluation purposes. No real passwords or sensitive customer identities are used.*
+
+---
+
+## 8. Installation & Setup
 
 ### Prerequisites
-- Node.js 18 LTS or newer
-- MongoDB running locally (`mongodb://127.0.0.1:27017/loop_db`) or MongoDB Atlas URI
-- Git
+- **Node.js**: `v18.0.0` or higher
+- **MongoDB**: Local MongoDB instance (`mongodb://127.0.0.1:27017/loop_db`) or a free MongoDB Atlas URI
+- **Git**
 
-### 1. Clone & Configure
+### 1. Clone the Repository
 ```bash
 git clone https://github.com/madhan023-mn/ai-customer-feedback.git
 cd ai-customer-feedback/LOOP-MERN
 ```
 
-### 2. Configure Environment Variables
+### 2. Configure Environment Files
+Create `.env` files for both server and client using the provided `.env.example` templates:
 
-**`server/.env`**:
-```env
-PORT=5000
-MONGO_URI=mongodb://127.0.0.1:27017/loop_db
-JWT_SECRET=loop_jwt_secret_key_2026_zidio
-REDIS_HOST=127.0.0.1
-REDIS_PORT=6379
+```bash
+# Server environment
+cp server/.env.example server/.env
 
-# AI Provider API Keys (Optional - Heuristic & local vector fallback engine activates if omitted)
-GEMINI_API_KEY=your_gemini_api_key
-OPENAI_API_KEY=your_openai_api_key
-```
-
-**`client/.env`**:
-```env
-VITE_API_URL=http://localhost:5000/api
+# Client environment
+cp client/.env.example client/.env
 ```
 
 ### 3. Install Dependencies
 ```bash
-# Install server dependencies
-cd server
+# Install root & server dependencies
 npm install
+cd server && npm install
 
 # Install client dependencies
-cd ../client
-npm install
+cd ../client && npm install
+cd ..
 ```
 
 ### 4. Seed the Database
-Populates MongoDB with 1 demo workspace, 3 demo users (`ADMIN`, `ANALYST`, `VIEWER`), 10 explicit `Theme` entities, 125 `Feedback` records, 125 `FeedbackTheme` join rows with confidence scores, and 125 `Embedding` dense vectors:
+Populates MongoDB with 1 workspace, 3 demo users (`ADMIN`, `ANALYST`, `VIEWER`), 10 explicit themes, 125 feedback verbatims, 125 confidence join records, and 125 dense vector embeddings:
 ```bash
-cd server
-node seed.js
+npm run seed
 ```
 
-### 5. Run Application
+### 5. Start Development Servers
 ```bash
-# Terminal 1: Run Backend Server
-cd server
-npm run dev
-
-# Terminal 2: Run Frontend Client
-cd client
+# Runs backend on port 5000 and Vite frontend on port 5173 concurrently
 npm run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173) in your browser and log in using `admin@acme.com` / `password123`.
+Open [http://localhost:5173](http://localhost:5173) in your browser and sign in using `admin@acme.com` / `password123`.
 
 ---
 
-## 📡 07 Key API Endpoints
+## 9. Environment Variables
 
-| Method | Endpoint | Description | Role Required |
+All sensitive values are stored in untracked `.env` files. Safe configuration templates are provided in `server/.env.example` and `client/.env.example`.
+
+### Backend (`server/.env`):
+```env
+PORT=5000
+MONGO_URI=mongodb://127.0.0.1:27017/loop_db
+JWT_SECRET=your_jwt_secret_key_here
+CLIENT_URL=http://localhost:5173
+
+# Optional: Background queue (fallback executes synchronously if Redis is offline)
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
+
+# Optional: AI Provider API Keys (heuristic & local vector fallback engine activates if omitted)
+GEMINI_API_KEY=your_gemini_api_key_here
+OPENAI_API_KEY=your_openai_api_key_here
+```
+
+### Frontend (`client/.env`):
+```env
+VITE_API_URL=http://localhost:5000/api
+```
+
+---
+
+## 10. API Overview
+
+All API endpoints require JWT Bearer authentication except public registration and login. Every query is filtered by the authenticated user's `workspaceId`.
+
+| Method | Endpoint | Allowed Roles | Description |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/api/auth/register` | Sign up user and create isolated workspace | Public |
-| `POST` | `/api/auth/login` | Log in and receive JWT token | Public |
-| `GET` | `/api/feedback` | Paginated feedback inbox with search and filters | Any authenticated |
-| `POST` | `/api/feedback` | Create single feedback item | Admin, Analyst |
-| `POST` | `/api/import/feedback` | Bulk import feedback from CSV | Admin, Analyst |
-| `POST` | `/api/feedback/simulate` | Ingest simulated channel feedback | Admin, Analyst |
-| `POST` | `/api/feedback/:id/analyze`| Trigger AI classification for item | Admin, Analyst |
-| `GET` | `/api/themes` | List themes with feedback counts & confidence | Any authenticated |
-| `GET` | `/api/themes/trends` | Period-over-period theme volume & spike alerts | Any authenticated |
-| `POST` | `/api/ai/ask` | Vector-grounded semantic Ask LOOP Q&A | Any authenticated |
-| `POST` | `/api/reports/voc` | Generate Voice-of-Customer report | Admin, Analyst |
-| `GET` | `/api/reports/export/pdf/:id` | Export VoC report as formatted PDF | Admin, Analyst |
-| `GET` | `/api/members` | List workspace members | Admin |
-| `POST` | `/api/members/invite` | Invite new user to workspace | Admin |
+| `POST` | `/api/auth/register` | Public | Register new user and provision tenant workspace |
+| `POST` | `/api/auth/login` | Public | Authenticate user and return JWT bearer token |
+| `GET` | `/api/auth/me` | Authenticated | Retrieve authenticated user profile and role |
+| `GET` | `/api/feedback` | Authenticated | Paginated feedback inbox with search and multi-filtering |
+| `POST` | `/api/feedback` | Admin, Analyst | Create a single feedback entry |
+| `PATCH` | `/api/feedback/:id/status` | Admin, Analyst | Update workflow status (`NEW`, `REVIEWED`, `ACTIONED`) |
+| `POST` | `/api/feedback/:id/analyze` | Admin, Analyst | Force real-time AI re-classification of feedback |
+| `POST` | `/api/import/feedback` | Admin, Analyst | Stream and batch-import feedback from CSV file |
+| `POST` | `/api/feedback/simulate` | Admin, Analyst | Ingest simulated feed from selected channels |
+| `GET` | `/api/dashboard/metrics` | Authenticated | Fetch aggregated KPI cards and spike alerts |
+| `GET` | `/api/dashboard/charts` | Authenticated | Fetch volume time series, donut, and bar chart data |
+| `GET` | `/api/themes` | Authenticated | List all themes with feedback counts and confidence |
+| `GET` | `/api/themes/trends` | Authenticated | Fetch period-over-period theme volume changes & spikes |
+| `POST` | `/api/ai/ask` | Authenticated | Vector-grounded Ask LOOP RAG semantic Q&A |
+| `POST` | `/api/reports/voc` | Admin, Analyst | Synthesize Voice-of-Customer executive digest |
+| `GET` | `/api/reports` | Authenticated | List all generated VoC reports |
+| `GET` | `/api/reports/export/pdf/:id` | Authenticated | Download binary PDF export of VoC report |
+| `GET` | `/api/members` | Admin | List workspace team members |
+| `POST` | `/api/members/invite` | Admin | Invite a new user to the workspace with assigned role |
 
 ---
 
-## 📄 08 License & Attribution
-Issued by **Zidio Development** — Web Development Track Capstone Project.  
-Built with corporate-grade software standards.
+## 11. Deployment
+
+### Vercel (Frontend & Serverless API)
+Project LOOP includes root `vercel.json` configuration for unified monorepo deployment:
+- **Client Build:** `@vercel/static-build` with `distDir: "dist"`
+- **Serverless API:** `@vercel/node` routing `/api/(.*)` to `api/index.js`
+
+### Render / Railway (Dedicated Backend)
+A `render.yaml` configuration is included to run the Express backend as a dedicated Node web service with MongoDB Atlas connections.
+
+---
+
+## 12. Project Structure
+
+```
+LOOP-MERN/
+├── .github/                  # CI/CD Workflows
+├── api/                      # Vercel Serverless entrypoint
+│   └── index.js
+├── assets/                   # Public documentation assets & screenshots
+│   └── screenshots/
+│       ├── dashboard.svg
+│       ├── feedback_inbox.svg
+│       ├── ai_analysis.svg
+│       ├── theme_explorer.svg
+│       ├── ask_loop.svg
+│       ├── voc_reports.svg
+│       └── rbac_login.svg
+├── client/                   # React 18 + Vite Frontend
+│   ├── src/
+│   │   ├── components/       # Reusable UI cards, tables, Navbar, ProtectedRoute
+│   │   ├── context/          # AuthContext, ThemeContext, RoleGuards
+│   │   ├── pages/            # Dashboard, Feedback, Themes, AskLoop, Reports, Members
+│   │   ├── services/         # Axios API client with auth interceptors
+│   │   ├── App.jsx           # React Router DOM configuration
+│   │   ├── index.css         # Custom Glassmorphism design system
+│   │   └── main.jsx
+│   ├── package.json
+│   └── vite.config.js
+├── server/                   # Node.js + Express API Backend
+│   ├── config/               # Database connection (Mongoose)
+│   ├── middleware/           # authMiddleware, roleMiddleware, errorHandler
+│   ├── models/               # Workspace, User, Feedback, Theme, Embedding, Report
+│   ├── queues/               # BullMQ job producers & workers
+│   ├── routes/               # Modular REST route handlers
+│   ├── services/             # AI classification, RAG cosine engine, PDFKit export
+│   ├── utils/                # CSV parser, spike trend calculator, JWT helper
+│   ├── seed.js               # Database seeding script (125+ records)
+│   ├── server.js             # Main Express application entrypoint
+│   └── package.json
+├── package.json              # Root package configuration
+├── vercel.json               # Vercel deployment specification
+├── render.yaml               # Render deployment specification
+└── README.md                 # Master Project Documentation
+```
+
+---
+
+## 13. Challenges & Solutions
+
+### 1. Serverless Background Queue Fault Tolerance
+- **Challenge:** Serverless cloud environments (like Vercel) cannot run long-lived Redis worker processes for BullMQ.
+- **Solution:** Implemented an adaptive producer (`feedbackJobProducer.js`) that detects Redis availability and automatically falls back to an in-process synchronous AI processor without dropping data or delaying responses.
+
+### 2. Eliminating Hallucinations in Executive VoC Reporting
+- **Challenge:** LLMs often hallucinate or compute inaccurate percentages when summarizing large volumes of raw feedback.
+- **Solution:** Hardcoded mathematical aggregations (counts, sentiment ratios, top theme percentages) in Node.js before prompting the LLM, passing verified figures into the model strictly for narrative synthesis.
+
+### 3. In-Database Vector Search Without Expensive Third-Party Subscriptions
+- **Challenge:** External vector databases (e.g., Pinecone) add architectural overhead and recurring costs.
+- **Solution:** Stored normalized 64-dimensional dense float vector embeddings directly in MongoDB and implemented an in-memory vector Cosine Similarity engine for fast, grounded semantic search.
+
+---
+
+## 14. Future Enhancements
+
+- **Direct Webhook Integrations:** Native bi-directional connectors for Zendesk, Jira, Slack, GitHub Issues, and Apple App Store Connect.
+- **Real-Time WebSocket Alerts:** Instant browser and desktop notifications when a theme exceeds negativity spike thresholds.
+- **Domain-Specific Fine-Tuning:** Custom fine-tuned sentiment models optimized for industry-specific terminology in FinTech, Healthcare, and Gaming.
+
+---
+
+## 15. Conclusion
+
+**Project LOOP** bridges the gap between raw customer sentiment and engineering execution. By combining a modern, responsive MERN stack with dense vector embeddings, dynamic spike detection algorithms, and automated executive PDF reporting, the platform delivers an enterprise-grade solution that enables product teams to listen, prioritize, and close the loop on customer feedback with confidence.
+
+---
+*Built for the **Zidio Development Web Development Track Capstone Evaluation**.*

@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 580" width="100%" height="100%" style="background:#0f172a; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <defs>
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0.9"/>
+    </linearGradient>
+    <linearGradient id="btnGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#4f46e5"/>
+      <stop offset="100%" stop-color="#06b6d4"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Top Bar -->
+  <rect x="0" y="0" width="1000" height="42" fill="#0b1120"/>
+  <circle cx="24" cy="21" r="5.5" fill="#ef4444"/>
+  <circle cx="42" cy="21" r="5.5" fill="#eab308"/>
+  <circle cx="60" cy="21" r="5.5" fill="#22c55e"/>
+  <text x="500" y="26" fill="#94a3b8" font-size="12" font-weight="600" text-anchor="middle">Project LOOP — Voice-of-Customer (VoC) Executive Reports</text>
+
+  <!-- Nav -->
+  <rect x="0" y="42" width="1000" height="48" fill="#111827" stroke="#1f2937" stroke-width="1"/>
+  <text x="24" y="72" fill="#6366f1" font-size="18" font-weight="800">🔄 LOOP</text>
+  <text x="135" y="71" fill="#94a3b8" font-size="12" font-weight="500">Dashboard</text>
+  <text x="205" y="71" fill="#94a3b8" font-size="12" font-weight="500">Inbox</text>
+  <text x="275" y="71" fill="#94a3b8" font-size="12" font-weight="500">Themes</text>
+  <text x="345" y="71" fill="#94a3b8" font-size="12" font-weight="500">Ask LOOP</text>
+  <rect x="405" y="54" width="105" height="26" rx="6" fill="#1e1b4b"/>
+  <text x="457" y="71" fill="#818cf8" font-size="12" font-weight="600" text-anchor="middle">VoC Reports</text>
+
+  <!-- Action Bar -->
+  <text x="24" y="125" fill="#f8fafc" font-size="20" font-weight="800">Voice-of-Customer (VoC) Digests</text>
+  <rect x="760" y="105" width="216" height="36" rx="8" fill="url(#btnGrad)"/>
+  <text x="868" y="128" fill="#ffffff" font-size="12" font-weight="700" text-anchor="middle">+ Generate New VoC Report</text>
+
+  <!-- Report Card Preview -->
+  <rect x="24" y="160" width="952" height="390" rx="10" fill="url(#cardGrad)" stroke="#334155" stroke-width="1"/>
+  
+  <rect x="45" y="180" width="150" height="24" rx="4" fill="#064e3b"/>
+  <text x="120" y="196" fill="#6ee7b7" font-size="11" font-weight="700" text-anchor="middle">WEEKLY DIGEST #24</text>
+  <text x="210" y="196" fill="#94a3b8" font-size="12">Period: Aug 18, 2026 – Aug 25, 2026 • 324 Feedbacks Analyzed</text>
+  
+  <rect x="830" y="180" width="125" height="30" rx="6" fill="#4f46e5"/>
+  <text x="892" y="200" fill="#ffffff" font-size="11" font-weight="700" text-anchor="middle">📄 Export PDF</text>
+
+  <line x1="45" y1="222" x2="955" y2="222" stroke="#334155" stroke-width="1"/>
+
+  <!-- Pre-computed Stats Bar -->
+  <rect x="45" y="235" width="910" height="50" rx="6" fill="#0b1120"/>
+  <text x="70" y="265" fill="#94a3b8" font-size="11">Total Volume: <tspan fill="#f8fafc" font-weight="700">324</tspan></text>
+  <text x="220" y="265" fill="#94a3b8" font-size="11">Positive Ratio: <tspan fill="#22c55e" font-weight="700">62%</tspan></text>
+  <text x="370" y="265" fill="#94a3b8" font-size="11">Negative Ratio: <tspan fill="#ef4444" font-weight="700">21%</tspan></text>
+  <text x="520" y="265" fill="#94a3b8" font-size="11">Top Theme: <tspan fill="#38bdf8" font-weight="700">Checkout &amp; Billing (38%)</tspan></text>
+
+  <!-- Narrative Summary Section -->
+  <text x="45" y="315" fill="#f8fafc" font-size="14" font-weight="700">Executive Summary &amp; Customer Sentiment</text>
+  <text x="45" y="338" fill="#cbd5e1" font-size="12">Overall customer sentiment remains healthy with strong praise for the v2.4 CSV bulk export release.</text>
+  <text x="45" y="356" fill="#cbd5e1" font-size="12">However, an emerging negativity spike in mobile payment gateways demands immediate engineering attention.</text>
+
+  <!-- Notable Verbatim Quote Callout -->
+  <rect x="45" y="378" width="910" height="60" rx="6" fill="#1e1b4b" stroke="#4338ca" stroke-width="1"/>
+  <text x="65" y="402" fill="#a5b4fc" font-size="11" font-weight="700">⭐ Notable Verbatim Quote:</text>
+  <text x="65" y="423" fill="#e0e7ff" font-size="12" font-style="italic">"The export feature is 10x faster now, but please fix the Apple Pay checkout loop!" — Enterprise Customer</text>
+
+  <!-- Action Items -->
+  <text x="45" y="470" fill="#f8fafc" font-size="13" font-weight="700">Recommended Engineering Actions:</text>
+  <text x="45" y="492" fill="#22c55e" font-size="12">✓ Patch Stripe webhook timeout in Mobile Checkout microservice (P0 Incident)</text>
+  <text x="45" y="512" fill="#38bdf8" font-size="12">✓ Expand CSV export documentation in developer knowledge base</text>
+</svg>
