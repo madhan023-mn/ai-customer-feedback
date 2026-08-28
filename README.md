@@ -14,16 +14,15 @@
 3. [Key Features](#3-key-features)
 4. [Tech Stack](#4-tech-stack)
 5. [System Architecture](#5-system-architecture)
-6. [Application Screenshots](#6-application-screenshots)
-7. [Demo Credentials](#7-demo-credentials)
-8. [Installation & Setup](#8-installation--setup)
-9. [Environment Variables](#9-environment-variables)
-10. [API Overview](#10-api-overview)
-11. [Deployment](#11-deployment)
-12. [Project Structure](#12-project-structure)
-13. [Challenges & Solutions](#13-challenges--solutions)
-14. [Future Enhancements](#14-future-enhancements)
-15. [Conclusion](#15-conclusion)
+6. [Demo Credentials](#6-demo-credentials)
+7. [Installation & Setup](#7-installation--setup)
+8. [Environment Variables](#8-environment-variables)
+9. [API Overview](#9-api-overview)
+10. [Deployment](#10-deployment)
+11. [Project Structure](#11-project-structure)
+12. [Challenges & Solutions](#12-challenges--solutions)
+13. [Future Enhancements](#13-future-enhancements)
+14. [Conclusion](#14-conclusion)
 
 ---
 
@@ -111,51 +110,7 @@ Digital product teams face three critical bottlenecks when handling user feedbac
 
 ---
 
-## 6. Application Screenshots
-
-### 📊 1. Executive Analytics Dashboard
-*Real-time KPI metrics, 30-day feedback volume area chart, AI sentiment donut chart, top themes breakdown, and active Negativity Spike alert banner.*
-![Analytics Dashboard](assets/screenshots/dashboard.svg)
-
----
-
-### 📥 2. Feedback Inbox & Triage Workflow
-*Multi-parameter search, date range pickers, status progression (`NEW` $\rightarrow$ `REVIEWED` $\rightarrow$ `ACTIONED`), and one-click saved view presets.*
-![Feedback Inbox](assets/screenshots/feedback_inbox.svg)
-
----
-
-### 🤖 3. Real-Time AI Auto-Classification
-*Structured extraction of sentiment score, product feature area, multi-theme confidence weights, and single-sentence AI rationale.*
-![AI Analysis](assets/screenshots/ai_analysis.svg)
-
----
-
-### 📈 4. Dynamic Theme Explorer & Spike Detection
-*Period-over-period volume comparison (current 7 days vs previous 7 days) with automated $+68\%$ spike detection badges and drill-down views.*
-![Theme Explorer](assets/screenshots/theme_explorer.svg)
-
----
-
-### 🔍 5. Ask LOOP (Vector-Grounded RAG Q&A)
-*Plain-English natural language querying backed by 64-dimensional vector similarity in MongoDB, strict anti-hallucination grounding, and cited source cards.*
-![Ask LOOP](assets/screenshots/ask_loop.svg)
-
----
-
-### 📄 6. Voice-of-Customer (VoC) Reports & PDF Export
-*Executive digest generation with pre-computed statistics, customer sentiment overview, notable verbatim quotes, and one-click downloadable PDFKit reports.*
-![VoC Reports](assets/screenshots/voc_reports.svg)
-
----
-
-### 🔐 7. Multi-Tenant Login & Role-Based Access Control
-*Secure authentication modal demonstrating isolated workspace access and pre-seeded RBAC roles.*
-![Login and RBAC](assets/screenshots/rbac_login.svg)
-
----
-
-## 7. Demo Credentials
+## 6. Demo Credentials
 
 The platform includes a pre-seeded, isolated demo workspace (**Acme Corp**) with 125+ pre-classified feedback items for evaluator testing:
 
@@ -169,7 +124,7 @@ The platform includes a pre-seeded, isolated demo workspace (**Acme Corp**) with
 
 ---
 
-## 8. Installation & Setup
+## 7. Installation & Setup
 
 ### Prerequisites
 - **Node.js**: `v18.0.0` or higher
@@ -220,7 +175,7 @@ Open [http://localhost:5173](http://localhost:5173) in your browser and sign in 
 
 ---
 
-## 9. Environment Variables
+## 8. Environment Variables
 
 All sensitive values are stored in untracked `.env` files. Safe configuration templates are provided in `server/.env.example` and `client/.env.example`.
 
@@ -247,7 +202,7 @@ VITE_API_URL=http://localhost:5000/api
 
 ---
 
-## 10. API Overview
+## 9. API Overview
 
 All API endpoints require JWT Bearer authentication except public registration and login. Every query is filtered by the authenticated user's `workspaceId`.
 
@@ -275,7 +230,7 @@ All API endpoints require JWT Bearer authentication except public registration a
 
 ---
 
-## 11. Deployment
+## 10. Deployment
 
 ### Vercel (Frontend & Serverless API)
 Project LOOP includes root `vercel.json` configuration for unified monorepo deployment:
@@ -287,22 +242,13 @@ A `render.yaml` configuration is included to run the Express backend as a dedica
 
 ---
 
-## 12. Project Structure
+## 11. Project Structure
 
 ```
 LOOP-MERN/
 ├── .github/                  # CI/CD Workflows
 ├── api/                      # Vercel Serverless entrypoint
 │   └── index.js
-├── assets/                   # Public documentation assets & screenshots
-│   └── screenshots/
-│       ├── dashboard.svg
-│       ├── feedback_inbox.svg
-│       ├── ai_analysis.svg
-│       ├── theme_explorer.svg
-│       ├── ask_loop.svg
-│       ├── voc_reports.svg
-│       └── rbac_login.svg
 ├── client/                   # React 18 + Vite Frontend
 │   ├── src/
 │   │   ├── components/       # Reusable UI cards, tables, Navbar, ProtectedRoute
@@ -333,7 +279,7 @@ LOOP-MERN/
 
 ---
 
-## 13. Challenges & Solutions
+## 12. Challenges & Solutions
 
 ### 1. Serverless Background Queue Fault Tolerance
 - **Challenge:** Serverless cloud environments (like Vercel) cannot run long-lived Redis worker processes for BullMQ.
@@ -349,7 +295,7 @@ LOOP-MERN/
 
 ---
 
-## 14. Future Enhancements
+## 13. Future Enhancements
 
 - **Direct Webhook Integrations:** Native bi-directional connectors for Zendesk, Jira, Slack, GitHub Issues, and Apple App Store Connect.
 - **Real-Time WebSocket Alerts:** Instant browser and desktop notifications when a theme exceeds negativity spike thresholds.
@@ -357,9 +303,10 @@ LOOP-MERN/
 
 ---
 
-## 15. Conclusion
+## 14. Conclusion
 
 **Project LOOP** bridges the gap between raw customer sentiment and engineering execution. By combining a modern, responsive MERN stack with dense vector embeddings, dynamic spike detection algorithms, and automated executive PDF reporting, the platform delivers an enterprise-grade solution that enables product teams to listen, prioritize, and close the loop on customer feedback with confidence.
 
 ---
 *Built for the **Zidio Development Web Development Track Capstone Evaluation**.*
+
