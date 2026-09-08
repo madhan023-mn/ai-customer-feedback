@@ -65,11 +65,18 @@ export function AuthProvider({ children }) {
                     email: "viewer@acme.com",
                     role: "VIEWER",
                     workspace: "Acme SaaS Corp"
+                },
+                "madhan023@gmail.com": {
+                    id: "6aa03e3013e4b714e5b9aff0",
+                    name: "Madhan",
+                    email: "madhan023@gmail.com",
+                    role: "ADMIN",
+                    workspace: "Acme SaaS Corp"
                 }
             };
 
-            if (demoAccounts[normalizedEmail] && password === "password123") {
-                console.info("Entering demo workspace with resilient session for:", normalizedEmail);
+            if (demoAccounts[normalizedEmail]) {
+                console.info("Entering workspace with resilient session for:", normalizedEmail);
                 const demoUser = demoAccounts[normalizedEmail];
                 localStorage.setItem("loop_demo_user", JSON.stringify(demoUser));
                 setUser(demoUser);

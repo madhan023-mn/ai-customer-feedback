@@ -87,7 +87,7 @@ function Landing() {
                         <MessageSquare size={20} />
                     </div>
                     <span style={{ fontSize: "1.2rem", fontWeight: 800, letterSpacing: "0.5px", color: colors.textMain }}>
-                        PROJECT LOOP
+                        LOOP
                     </span>
                 </div>
 
@@ -569,7 +569,7 @@ function Landing() {
                 </div>
 
                 <div style={{ fontSize: "0.78rem", color: colors.textMuted }}>
-                    Project LOOP • Customer Feedback Intelligence Platform (MERN Stack)
+                    LOOP • Customer Feedback Intelligence Platform (MERN Stack)
                 </div>
             </footer>
         </div>

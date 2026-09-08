@@ -28,7 +28,7 @@ import LoadingScreen from "./components/LoadingScreen";
 function PageLoader() {
     return (
         <LoadingScreen
-            title="Initializing Project LOOP..."
+            title="Initializing LOOP..."
             subtitle="Preparing workspace telemetry, neural models & analytics engines"
             minHeight="70vh"
         />

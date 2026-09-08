@@ -1,4 +1,4 @@
-# 🔄 Project LOOP — AI Customer-Feedback Intelligence Platform
+# 🔄 LOOP — AI Customer-Feedback Intelligence Platform
 
 > **Zidio Development Internship Capstone Project Final Submission**  
 > **Repository:** [https://github.com/madhan023-mn/ai-customer-feedback](https://github.com/madhan023-mn/ai-customer-feedback)  
@@ -28,9 +28,9 @@
 
 ## 1. Project Overview
 
-**Project LOOP** is an enterprise-grade AI customer-feedback intelligence platform that unifies scattered customer signals into a ranked, evidence-backed product action plan. Modern companies receive feedback across Zendesk support tickets, App Store reviews, post-purchase NPS/CSAT surveys, sales discovery notes, and community channels. Project LOOP ingests, classifies, clusters, and analyzes this high-volume unstructured feedback in real-time.
+**LOOP** is an enterprise-grade AI customer-feedback intelligence platform that unifies scattered customer signals into a ranked, evidence-backed product action plan. Modern companies receive feedback across Zendesk support tickets, App Store reviews, post-purchase NPS/CSAT surveys, sales discovery notes, and community channels. LOOP ingests, classifies, clusters, and analyzes this high-volume unstructured feedback in real-time.
 
-By combining modern full-stack MERN engineering with dense vector embeddings and Large Language Models, Project LOOP empowers product managers, engineers, and executives to understand customer sentiment shifts instantly and make confident, data-driven roadmap decisions.
+By combining modern full-stack MERN engineering with dense vector embeddings and Large Language Models, LOOP empowers product managers, engineers, and executives to understand customer sentiment shifts instantly and make confident, data-driven roadmap decisions.
 
 ---
 
@@ -41,7 +41,7 @@ Digital product teams face three critical bottlenecks when handling user feedbac
 2. **Manual Triage Bottlenecks:** Human sentiment analysis and tagging cannot scale as user bases grow, resulting in delayed bug detection and missed churn signals.
 3. **Subjective Prioritization:** Feature roadmaps are often influenced by the loudest anecdotal voices rather than quantifiable, evidence-backed customer pain points.
 
-**Project LOOP** solves this by automating multi-channel ingestion, structured AI classification, automated spike detection, plain-English vector Q&A (**Ask LOOP**), and one-click **Voice-of-Customer (VoC)** executive reporting.
+**LOOP** solves this by automating multi-channel ingestion, structured AI classification, automated spike detection, plain-English vector Q&A (**Ask LOOP**), and one-click **Voice-of-Customer (VoC)** executive reporting.
 
 ---
 
@@ -233,7 +233,7 @@ All API endpoints require JWT Bearer authentication except public registration a
 ## 10. Deployment
 
 ### Vercel (Frontend & Serverless API)
-Project LOOP includes root `vercel.json` configuration for unified monorepo deployment:
+LOOP includes root `vercel.json` configuration for unified monorepo deployment:
 - **Client Build:** `@vercel/static-build` with `distDir: "dist"`
 - **Serverless API:** `@vercel/node` routing `/api/(.*)` to `api/index.js`
 
@@ -305,7 +305,7 @@ LOOP-MERN/
 
 ## 14. Conclusion
 
-**Project LOOP** bridges the gap between raw customer sentiment and engineering execution. By combining a modern, responsive MERN stack with dense vector embeddings, dynamic spike detection algorithms, and automated executive PDF reporting, the platform delivers an enterprise-grade solution that enables product teams to listen, prioritize, and close the loop on customer feedback with confidence.
+**LOOP** bridges the gap between raw customer sentiment and engineering execution. By combining a modern, responsive MERN stack with dense vector embeddings, dynamic spike detection algorithms, and automated executive PDF reporting, the platform delivers an enterprise-grade solution that enables product teams to listen, prioritize, and close the loop on customer feedback with confidence.
 
 ---
 *Built for the **Zidio Development Web Development Track Capstone Evaluation**.*

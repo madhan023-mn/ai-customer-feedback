@@ -33,7 +33,9 @@ function generateToken(user) {
 
 function setAuthCookie(res, user) {
     const token = generateToken(user);
-    res.cookie("token", token, getCookieOptions());
+    if (res && typeof res.cookie === "function") {
+        res.cookie("token", token, getCookieOptions());
+    }
     return token;
 }
 

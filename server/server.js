@@ -44,14 +44,14 @@ app.get("/", (req, res) => {
     }
     res.json({
         status: "online",
-        message: "Project LOOP MERN API is running"
+        message: "LOOP MERN API is running"
     });
 });
 
 app.get("/api", (req, res) => {
     res.json({
         status: "online",
-        message: "Project LOOP MERN API is running"
+        message: "LOOP MERN API is running"
     });
 });
 
