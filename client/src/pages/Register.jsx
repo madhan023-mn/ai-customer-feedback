@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
-import { MessageSquare, AlertCircle, User, Briefcase, Mail, Lock, UserPlus } from "lucide-react";
+import { MessageSquare, AlertCircle, User, Briefcase, Mail, Lock, UserPlus, ArrowLeft, Home } from "lucide-react";
 
 function Register() {
     const navigate = useNavigate();
@@ -16,6 +16,14 @@ function Register() {
 
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
+
+    function handleGoBack() {
+        if (window.history.length > 1) {
+            navigate(-1);
+        } else {
+            navigate("/");
+        }
+    }
 
     function handleChange(e) {
         setForm({
@@ -48,6 +56,23 @@ function Register() {
     return (
         <div className="auth-page">
             <div className="auth-card">
+                <div className="auth-top-nav">
+                    <button
+                        type="button"
+                        onClick={handleGoBack}
+                        className="auth-back-btn"
+                        title="Go back to previous or main page"
+                    >
+                        <ArrowLeft size={16} />
+                        <span>Back to Main Page</span>
+                    </button>
+
+                    <Link to="/" className="auth-home-link" title="Return to Main Landing Page">
+                        <Home size={15} />
+                        <span>Home</span>
+                    </Link>
+                </div>
+
                 <div className="auth-header">
                     <div className="auth-brand">
                         <MessageSquare size={28} />

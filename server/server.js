@@ -31,7 +31,14 @@ app.use(async (req, res, next) => {
     }
 });
 
+const path = require("path");
+const fs = require("fs");
+const clientDistPath = path.join(__dirname, "../client/dist");
+
 app.get("/", (req, res) => {
+    if (fs.existsSync(path.join(clientDistPath, "index.html"))) {
+        return res.sendFile(path.join(clientDistPath, "index.html"));
+    }
     res.json({
         status: "online",
         message: "Project LOOP MERN API is running"
@@ -87,6 +94,17 @@ app.use("/import", importRoutes);
 
 app.use("/api/analytics", analyticsRoutes);
 app.use("/analytics", analyticsRoutes);
+
+// Serve static client build and handle SPA reload fallback if client/dist exists
+if (fs.existsSync(clientDistPath)) {
+    app.use(express.static(clientDistPath));
+    app.get("*", (req, res, next) => {
+        if (req.path.startsWith("/api") || req.path.startsWith("/auth")) {
+            return next();
+        }
+        res.sendFile(path.join(clientDistPath, "index.html"));
+    });
+}
 
 const PORT = process.env.PORT || 5000;
 

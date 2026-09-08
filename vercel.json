@@ -23,8 +23,11 @@
       "dest": "client/assets/$1"
     },
     {
-      "src": "/(.*)",
+      "src": "/((?:[^/]+/)*[^/]+\\.[^/]+)",
       "dest": "client/$1"
+    },
+    {
+      "handle": "filesystem"
     },
     {
       "src": "/(.*)",

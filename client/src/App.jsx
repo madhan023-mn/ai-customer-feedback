@@ -56,7 +56,10 @@ function App() {
 
                     {/* Public Authentication Pages */}
                     <Route path="/login" element={<Login />} />
+                    <Route path="/signin" element={<Login />} />
                     <Route path="/register" element={<Register />} />
+                    <Route path="/signup" element={<Register />} />
+                    <Route path="/create-workspace" element={<Register />} />
 
                     {/* Protected Workspace Routes */}
                     <Route
@@ -235,11 +238,9 @@ function App() {
                     <Route
                         path="*"
                         element={
-                            <ProtectedRoute>
-                                <AppLayout>
-                                    <NotFound />
-                                </AppLayout>
-                            </ProtectedRoute>
+                            <AppLayout>
+                                <NotFound />
+                            </AppLayout>
                         }
                     />
                 </Routes>
