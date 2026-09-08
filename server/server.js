@@ -98,10 +98,18 @@ app.use("/import", importRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/analytics", analyticsRoutes);
 
+app.get(["/api/health", "/health"], (req, res) => {
+    res.json({
+        status: "ok",
+        uptime: process.uptime(),
+        timestamp: new Date().toISOString()
+    });
+});
+
 // Serve static client build and handle SPA reload fallback if client/dist exists
 if (fs.existsSync(clientDistPath)) {
     app.use(express.static(clientDistPath));
-    app.get("*", (req, res, next) => {
+    app.use((req, res, next) => {
         if (req.path.startsWith("/api") || req.path.startsWith("/auth")) {
             return next();
         }
