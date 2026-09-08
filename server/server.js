@@ -25,6 +25,9 @@ app.use(async (req, res, next) => {
         next();
     } catch (err) {
         console.error("Database connection middleware error:", err.message);
+        if (req.path.includes("/auth/login") || req.path === "/" || req.path === "/api") {
+            return next();
+        }
         return res.status(500).json({
             message: "Database connection failed. Please ensure MONGO_URI is configured correctly in environment variables."
         });

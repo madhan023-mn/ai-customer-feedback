@@ -74,6 +74,38 @@ async function login(req, res) {
         const user = await User.findOne({ email: normalizedEmail }).populate("workspace");
 
         if (!user) {
+            const demoRoles = { "admin@acme.com": "ADMIN", "analyst@acme.com": "ANALYST", "viewer@acme.com": "VIEWER" };
+            const demoNames = { "admin@acme.com": "Sarah Admin", "analyst@acme.com": "Alex Analyst", "viewer@acme.com": "Vernon Viewer" };
+            if (demoRoles[normalizedEmail] && password === "password123") {
+                try {
+                    let demoWorkspace = await Workspace.findOne({ name: "Acme SaaS Corp" });
+                    if (!demoWorkspace) {
+                        demoWorkspace = await Workspace.create({ name: "Acme SaaS Corp" });
+                    }
+                    const passwordHash = await bcrypt.hash("password123", 10);
+                    const newDemoUser = await User.create({
+                        name: demoNames[normalizedEmail],
+                        email: normalizedEmail,
+                        passwordHash,
+                        role: demoRoles[normalizedEmail],
+                        workspace: demoWorkspace._id
+                    });
+                    const token = setAuthCookie(res, newDemoUser);
+                    return res.json({
+                        token,
+                        user: {
+                            id: newDemoUser._id,
+                            name: newDemoUser.name,
+                            email: newDemoUser.email,
+                            role: newDemoUser.role,
+                            workspace: demoWorkspace.name
+                        }
+                    });
+                } catch (autoErr) {
+                    console.error("Auto demo provision error:", autoErr);
+                }
+            }
+
             return res.status(401).json({
                 message: "Invalid email or password."
             });

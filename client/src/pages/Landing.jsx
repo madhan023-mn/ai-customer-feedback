@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
 import {
@@ -9,12 +9,16 @@ import {
     LogIn,
     UserPlus,
     Shield,
-    Eye
+    Eye,
+    Loader2
 } from "lucide-react";
 
 function Landing() {
     const navigate = useNavigate();
     const { user, login } = useAuth();
+
+    const [demoLoading, setDemoLoading] = useState("");
+    const [demoError, setDemoError] = useState("");
 
     const colors = {
         bg: "#f8fafc",
@@ -31,10 +35,15 @@ function Landing() {
 
     async function handleDemoLogin(email) {
         try {
+            setDemoLoading(email);
+            setDemoError("");
             await login(email, "password123");
             navigate("/dashboard");
         } catch (err) {
-            navigate("/login");
+            console.error("Demo login error:", err);
+            setDemoError(err?.response?.data?.message || err.message || "Failed to initialize demo workspace. Please try again.");
+        } finally {
+            setDemoLoading("");
         }
     }
 
@@ -404,6 +413,7 @@ function Landing() {
                 }}>
                     <button
                         onClick={() => handleDemoLogin("admin@acme.com")}
+                        disabled={!!demoLoading}
                         style={{
                             padding: "10px 22px",
                             fontSize: "0.9rem",
@@ -412,19 +422,25 @@ function Landing() {
                             backgroundColor: "#2563eb",
                             color: "#ffffff",
                             border: "none",
-                            cursor: "pointer",
+                            cursor: demoLoading ? "not-allowed" : "pointer",
+                            opacity: demoLoading && demoLoading !== "admin@acme.com" ? 0.6 : 1,
                             display: "inline-flex",
                             alignItems: "center",
                             gap: "8px",
-                            transition: "background 0.2s"
+                            transition: "all 0.2s"
                         }}
                     >
-                        <Shield size={16} />
-                        <span>Admin Demo</span>
+                        {demoLoading === "admin@acme.com" ? (
+                            <Loader2 size={16} className="spin" />
+                        ) : (
+                            <Shield size={16} />
+                        )}
+                        <span>{demoLoading === "admin@acme.com" ? "Entering Workspace..." : "Admin Demo"}</span>
                     </button>
 
                     <button
                         onClick={() => handleDemoLogin("analyst@acme.com")}
+                        disabled={!!demoLoading}
                         style={{
                             padding: "10px 22px",
                             fontSize: "0.9rem",
@@ -433,19 +449,25 @@ function Landing() {
                             backgroundColor: colors.btnSecondaryBg,
                             color: colors.textMain,
                             border: `1px solid ${colors.btnSecondaryBorder}`,
-                            cursor: "pointer",
+                            cursor: demoLoading ? "not-allowed" : "pointer",
+                            opacity: demoLoading && demoLoading !== "analyst@acme.com" ? 0.6 : 1,
                             display: "inline-flex",
                             alignItems: "center",
                             gap: "8px",
-                            transition: "background 0.2s"
+                            transition: "all 0.2s"
                         }}
                     >
-                        <Sparkles size={16} color="#8b5cf6" />
-                        <span>Analyst Demo</span>
+                        {demoLoading === "analyst@acme.com" ? (
+                            <Loader2 size={16} className="spin" color="#8b5cf6" />
+                        ) : (
+                            <Sparkles size={16} color="#8b5cf6" />
+                        )}
+                        <span>{demoLoading === "analyst@acme.com" ? "Entering Workspace..." : "Analyst Demo"}</span>
                     </button>
 
                     <button
                         onClick={() => handleDemoLogin("viewer@acme.com")}
+                        disabled={!!demoLoading}
                         style={{
                             padding: "10px 22px",
                             fontSize: "0.9rem",
@@ -454,17 +476,41 @@ function Landing() {
                             backgroundColor: colors.btnSecondaryBg,
                             color: colors.textMain,
                             border: `1px solid ${colors.btnSecondaryBorder}`,
-                            cursor: "pointer",
+                            cursor: demoLoading ? "not-allowed" : "pointer",
+                            opacity: demoLoading && demoLoading !== "viewer@acme.com" ? 0.6 : 1,
                             display: "inline-flex",
                             alignItems: "center",
                             gap: "8px",
-                            transition: "background 0.2s"
+                            transition: "all 0.2s"
                         }}
                     >
-                        <Eye size={16} color={colors.textMuted} />
-                        <span>Viewer Demo</span>
+                        {demoLoading === "viewer@acme.com" ? (
+                            <Loader2 size={16} className="spin" />
+                        ) : (
+                            <Eye size={16} color={colors.textMuted} />
+                        )}
+                        <span>{demoLoading === "viewer@acme.com" ? "Entering Workspace..." : "Viewer Demo"}</span>
                     </button>
                 </div>
+
+                {demoError && (
+                    <div style={{
+                        marginTop: "1.25rem",
+                        padding: "10px 16px",
+                        borderRadius: "8px",
+                        backgroundColor: "#fee2e2",
+                        border: "1px solid #fca5a5",
+                        color: "#dc2626",
+                        fontSize: "0.85rem",
+                        fontWeight: 600,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "8px"
+                    }}>
+                        <span>{demoError}</span>
+                    </div>
+                )}
             </section>
 
             {/* Final CTA Section */}
